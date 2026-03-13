@@ -85,6 +85,7 @@ void q3_stack_free(q3_stack_t *self, void *data) {
 q3_heap_t q3_heap_init(void) {
     q3_heap_t self = {0};
 
+    self.m_memory = q3_alloc(Q3K_HEAP_SIZE);
 	self.m_memory->size = Q3K_HEAP_SIZE;
 
 	self.m_free_blocks = q3_alloc(sizeof(q3_heap_free_block_t) * Q3K_HEAP_INITIAL_CAPACITY); self.m_free_block_count = 1;
@@ -597,7 +598,7 @@ bool q3_box_raycast(q3_box_t *self, q3_transform_t *tx, q3_raycast_data_t* rayca
 	// t = (e[i] - p.[i]) / d[i]
 	q3_r32 t0;
 	q3_r32 t1;
-	q3_vec3_t n0;
+	q3_vec3_t n0 = {0};
 
 	for (int i = 0; i < 3; ++i) {
 		// Check for ray parallel to and outside of AABB
@@ -714,6 +715,8 @@ const q3_i32 q3_box_indices[36] = {
 //--------------------------------------------------------------------------------------------------
 
 void q3_box_render(q3_box_t *self, q3_transform_t *tx, bool awake, q3_render_t* render) {
+    Q3_UNUSED(awake);
+
 	q3_transform_t world = q3_tmul(tx, &self->local);
 
 	q3_vec3_t vertices[8] = {
@@ -734,8 +737,8 @@ void q3_box_render(q3_box_t *self, q3_transform_t *tx, bool awake, q3_render_t* 
 
 		q3_vec3_t n = q3_norm(q3_cross(q3_v3sub(b, a), q3_v3sub(c, a)));
 
-        render->set_tri_normal(n.x, n.y, n.z);
-		render->triangle(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+        render->set_tri_normal(render, n.x, n.y, n.z);
+		render->triangle(render, a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
 	}
 }
 
@@ -796,7 +799,7 @@ void q3_contact_constraint_solve_collision(q3_contact_constraint_t *self) {
 // q_box_to_box
 //--------------------------------------------------------------------------------------------------
 
-inline bool q3__track_face_axis(
+static inline bool q3__track_face_axis(
     q3_i32* axis, 
     q3_i32 n, 
     q3_r32 s, 
@@ -818,7 +821,7 @@ inline bool q3__track_face_axis(
 }
 
 //--------------------------------------------------------------------------------------------------
-inline bool q3__track_edge_axis(
+static inline bool q3__track_edge_axis(
     q3_i32* axis, 
     q3_i32 n, 
     q3_r32 s, 
@@ -1082,25 +1085,23 @@ q3_i32 q3__orthographic(
 			assert(out_count < 8);
 			out[out_count++] = b;
 		}
-
 		// I
 		else if (in_front(da) && behind(db)) {
 			cv.f = b.f;
 			// cv.v = a.v + (b.v - a.v) * (da / (da - db));
 			cv.v = q3_v3add(a.v, q3_v3mulf(q3_v3sub(b.v, a.v), (da / (da - db))));
-			cv.f.out_r = clip_edge;
+			cv.f.out_r = (q3_u8)clip_edge;
 			cv.f.out_i = 0;
 			assert(out_count < 8);
 			out[out_count++] = cv;
 		}
-
 		// I, B
 		else if (behind(da) && in_front(db))
 		{
 			cv.f = a.f;
 			// cv.v = a.v + (b.v - a.v) * (da / (da - db));
 			cv.v = q3_v3add(a.v, q3_v3mulf(q3_v3sub(b.v, a.v), (da / (da - db))));
-			cv.f.in_r = clip_edge;
+			cv.f.in_r = (q3_u8)clip_edge;
 			cv.f.in_i = 0;
 			assert(out_count < 8);
 			out[out_count++] = cv;
@@ -1175,7 +1176,7 @@ q3_i32 q3__clip(
 
 
 //--------------------------------------------------------------------------------------------------
-inline void q3__edges_contact(
+static inline void q3__edges_contact(
     q3_vec3_t *CA,
     q3_vec3_t *CB,
     q3_vec3_t PA,
@@ -1292,16 +1293,16 @@ void q3_box_to_box(q3_manifold_t* m, q3_box_t* a, q3_box_t* b) {
 	q3_vec3_t t = q3_m3mulv3_trans(&atx.rotation, q3_v3sub(btx.position, atx.position));
 
 	// Query states
-	q3_r32 s;
+	q3_r32 s = 0;
 	q3_r32 a_max = -Q3_R32_MAX;
 	q3_r32 b_max = -Q3_R32_MAX;
 	q3_r32 e_max = -Q3_R32_MAX;
 	q3_i32 a_axis = ~0;
 	q3_i32 b_axis = ~0;
 	q3_i32 e_axis = ~0;
-	q3_vec3_t n_a;
-	q3_vec3_t n_b;
-	q3_vec3_t n_e;
+	q3_vec3_t n_a = {0};
+	q3_vec3_t n_b = {0};
+	q3_vec3_t n_e = {0};
 
 	// Face axis checks
 
@@ -1551,63 +1552,73 @@ typedef enum
     Q3_BODY_FLAGS_LOCK_AXIS_Z  = 0x400,
 } q3_body_flags_e;
 
-q3_body_t q3__body_init(q3_bodydef_t *def, q3_scene_t* scene) {
-    q3_body_t out = {
-        .m_linear_velocity  = def->linear_velocity,
-        .m_angular_velocity = def->angular_velocity,
-        .m_q                = q3_quat_from_angle(q3_norm(def->axis), def->angle),
-        .m_tx.position      = def->position,
-        .m_gravity_scale    = def->gravity_scale,
-        .m_layers           = def->layers,
-        .m_user_data        = def->user_data,
-        .m_scene            = scene,
-        .m_linear_damping   = def->linear_damping,
-        .m_angular_damping  = def->angular_damping,
+q3_bodydef_t q3_bodydef_default(void) {
+    return (q3_bodydef_t) {
+        // Usually a gravity scale of 1 is the best
+        .gravity_scale = 1.f,
+        // Common default values
+        .body_type = Q3_STATIC_BODY,
+        .layers = 0x000000001,
+        .allow_sleep = true,
+        .awake = true,
+        .active = true,
+        .angular_damping = 0.1f,
     };
+}
 
-    out.m_tx.rotation = q3_quat_to_mat3(out.m_q);
+void q3__body_init(q3_body_t *self, q3_bodydef_t *def, q3_scene_t* scene) {
+    self->m_linear_velocity  = def->linear_velocity;
+    self->m_angular_velocity = def->angular_velocity;
+    self->m_q                = q3_quat_from_angle(q3_norm(def->axis), def->angle);
+    self->m_tx.position      = def->position;
+    self->m_gravity_scale    = def->gravity_scale;
+    self->m_layers           = def->layers;
+    self->m_user_data        = def->user_data;
+    self->m_scene            = scene;
+    self->m_linear_damping   = def->linear_damping;
+    self->m_angular_damping  = def->angular_damping;
 
-	if (def->body_type == Q3_BODY_DYNAMIC) {
-		out.m_flags |= Q3_BODY_FLAGS_DYNAMIC;
+    self->m_tx.rotation = q3_quat_to_mat3(self->m_q);
+
+	if (def->body_type == Q3_DYNAMIC_BODY) {
+		self->m_flags |= Q3_BODY_FLAGS_DYNAMIC;
     }
 	else {
-		if (def->body_type == Q3_BODY_STATIC) {
-			out.m_flags |= Q3_BODY_FLAGS_STATIC;
-			out.m_linear_velocity = q3_v3identity();
-			out.m_angular_velocity = q3_v3identity();
-			out.m_force = q3_v3identity();
-			out.m_torque = q3_v3identity();
+		if (def->body_type == Q3_STATIC_BODY) {
+			self->m_flags |= Q3_BODY_FLAGS_STATIC;
+			self->m_linear_velocity = q3_v3identity();
+			self->m_angular_velocity = q3_v3identity();
+			self->m_force = q3_v3identity();
+			self->m_torque = q3_v3identity();
 		}
-		else if (def->body_type == Q3_BODY_KINEMATIC) {
-			out.m_flags |= Q3_BODY_FLAGS_KINEMATIC;
+		else if (def->body_type == Q3_DYNAMIC_BODY) {
+			self->m_flags |= Q3_BODY_FLAGS_KINEMATIC;
         }
 	}
 
 	if (def->allow_sleep) {
-		out.m_flags |= Q3_BODY_FLAGS_ALLOW_SLEEP;
+		self->m_flags |= Q3_BODY_FLAGS_ALLOW_SLEEP;
     }
 
 	if (def->awake) {
-		out.m_flags |= Q3_BODY_FLAGS_AWAKE;
+		self->m_flags |= Q3_BODY_FLAGS_AWAKE;
     }
 
 	if (def->active) {
-		out.m_flags |= Q3_BODY_FLAGS_ACTIVE;
+		self->m_flags |= Q3_BODY_FLAGS_ACTIVE;
     }
 
 	if (def->lock_axis_x) {
-		out.m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_X;
+		self->m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_X;
     }
 
 	if (def->lock_axis_y) {
-		out.m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_Y;
+		self->m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_Y;
     }
 
 	if (def->lock_axis_z) {
-		out.m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_Z;
+		self->m_flags |= Q3_BODY_FLAGS_LOCK_AXIS_Z;
     }
-
-    return out;
 }
 
 void q3__body_calculate_mass_data(q3_body_t *self) {
@@ -1920,19 +1931,19 @@ void q3_body_render(q3_body_t *self, q3_render_t *render) {
 
 void q3_body_dump(q3_body_t *self, FILE *file, q3_i32 index) {
 	fprintf(file, "{\n");
-	fprintf(file, "\tq3Body_def bd;\n");
+	fprintf(file, "\tq3_body_t_def bd;\n");
 
 	switch (self->m_flags & (Q3_BODY_FLAGS_STATIC | Q3_BODY_FLAGS_DYNAMIC | Q3_BODY_FLAGS_KINEMATIC)) {
         case Q3_BODY_FLAGS_STATIC:
-            fprintf(file, "\tbd.body_type = q3Body_type(%d);\n", Q3_BODY_STATIC);
+            fprintf(file, "\tbd.body_type = q3_body_t_type(%d);\n", Q3_STATIC_BODY);
             break;
 
         case Q3_BODY_FLAGS_DYNAMIC:
-            fprintf(file, "\tbd.body_type = q3Body_type(%d);\n", Q3_BODY_DYNAMIC);
+            fprintf(file, "\tbd.body_type = q3_body_t_type(%d);\n", Q3_DYNAMIC_BODY);
             break;
 
         case Q3_BODY_FLAGS_KINEMATIC:
-            fprintf(file, "\tbd.body_type = q3Body_type(%d);\n", Q3_BODY_KINEMATIC);
+            fprintf(file, "\tbd.body_type = q3_body_t_type(%d);\n", Q3_DYNAMIC_BODY);
             break;
 	}
 
@@ -2099,8 +2110,8 @@ q3_i32 q3__dynamic_aabb_tree_balance(q3_dynamic_aabb_tree_t *self, q3_i32 i_a) {
 			A->aabb = q3_aabb_combine(&B->aabb, &G->aabb);
 			C->aabb = q3_aabb_combine(&A->aabb, &F->aabb);
 
-			A->height = 1 + q3_rmax(B->height, G->height);
-			C->height = 1 + q3_rmax(A->height, F->height);
+			A->height = 1 + q3_imax(B->height, G->height);
+			C->height = 1 + q3_imax(A->height, F->height);
 		}
 		else {
 			C->right = i_g;
@@ -2109,8 +2120,8 @@ q3_i32 q3__dynamic_aabb_tree_balance(q3_dynamic_aabb_tree_t *self, q3_i32 i_a) {
 			A->aabb = q3_aabb_combine(&B->aabb, &F->aabb);
 			C->aabb = q3_aabb_combine(&A->aabb, &G->aabb);
 
-			A->height = 1 + q3_rmax(B->height, F->height);
-			C->height = 1 + q3_rmax(A->height, G->height);
+			A->height = 1 + q3_imax(B->height, F->height);
+			C->height = 1 + q3_imax(A->height, G->height);
 		}
 
 		return i_c;
@@ -2148,8 +2159,8 @@ q3_i32 q3__dynamic_aabb_tree_balance(q3_dynamic_aabb_tree_t *self, q3_i32 i_a) {
 			A->aabb = q3_aabb_combine(&C->aabb, &E->aabb);
 			B->aabb = q3_aabb_combine(&A->aabb, &D->aabb);
 
-			A->height = 1 + q3_rmax(C->height, E->height);
-			B->height = 1 + q3_rmax(A->height, D->height);
+			A->height = 1 + q3_imax(C->height, E->height);
+			B->height = 1 + q3_imax(A->height, D->height);
 		}
 		else {
 			B->left = i_e;
@@ -2158,8 +2169,8 @@ q3_i32 q3__dynamic_aabb_tree_balance(q3_dynamic_aabb_tree_t *self, q3_i32 i_a) {
 			A->aabb = q3_aabb_combine(&C->aabb, &D->aabb);
 			B->aabb = q3_aabb_combine(&A->aabb, &E->aabb);
 
-			A->height = 1 + q3_rmax(C->height, D->height);
-			B->height = 1 + q3_rmax(A->height, E->height);
+			A->height = 1 + q3_imax(C->height, D->height);
+			B->height = 1 + q3_imax(A->height, E->height);
 		}
 
 		return i_b;
@@ -2178,7 +2189,7 @@ void q3__dynamic_aabb_tree_sync_heirarchy(q3_dynamic_aabb_tree_t *self, q3_i32 i
 		q3_i32 left = self->m_nodes[index].left;
 		q3_i32 right = self->m_nodes[index].right;
 
-		self->m_nodes[index].height = 1 + q3_rmax(self->m_nodes[left].height, self->m_nodes[right].height);
+		self->m_nodes[index].height = 1 + q3_imax(self->m_nodes[left].height, self->m_nodes[right].height);
 		self->m_nodes[index].aabb = q3_aabb_combine(&self->m_nodes[left].aabb, &self->m_nodes[right].aabb);
 
 		index = self->m_nodes[index].parent;
@@ -2356,28 +2367,28 @@ void q3__dynamic_aabb_tree_render_node(q3_dynamic_aabb_tree_t *self, q3_render_t
 	q3_aabb_node_t *n = self->m_nodes + index;
 	q3_aabb_t *b = &n->aabb;
 
-	render->set_pen_position(b->min.x, b->max.y, b->min.z);
+	render->set_pen_position(render, b->min.x, b->max.y, b->min.z);
 
-	render->line(b->min.x, b->max.y, b->max.z);
-	render->line(b->max.x, b->max.y, b->max.z);
-	render->line(b->max.x, b->max.y, b->min.z);
-	render->line(b->min.x, b->max.y, b->min.z);
+	render->line(render, b->min.x, b->max.y, b->max.z);
+	render->line(render, b->max.x, b->max.y, b->max.z);
+	render->line(render, b->max.x, b->max.y, b->min.z);
+	render->line(render, b->min.x, b->max.y, b->min.z);
 
-	render->set_pen_position(b->min.x, b->min.y, b->min.z);
+	render->set_pen_position(render, b->min.x, b->min.y, b->min.z);
 
-	render->line(b->min.x, b->min.y, b->max.z);
-	render->line(b->max.x, b->min.y, b->max.z);
-	render->line(b->max.x, b->min.y, b->min.z);
-	render->line(b->min.x, b->min.y, b->min.z);
+	render->line(render, b->min.x, b->min.y, b->max.z);
+	render->line(render, b->max.x, b->min.y, b->max.z);
+	render->line(render, b->max.x, b->min.y, b->min.z);
+	render->line(render, b->min.x, b->min.y, b->min.z);
 
-	render->set_pen_position(b->min.x, b->min.y, b->min.z);
-	render->line(b->min.x, b->max.y, b->min.z);
-	render->set_pen_position(b->max.x, b->min.y, b->min.z);
-	render->line(b->max.x, b->max.y, b->min.z);
-	render->set_pen_position(b->max.x, b->min.y, b->max.z);
-	render->line(b->max.x, b->max.y, b->max.z);
-	render->set_pen_position(b->min.x, b->min.y, b->max.z);
-	render->line(b->min.x, b->max.y, b->max.z);
+	render->set_pen_position(render, b->min.x, b->min.y, b->min.z);
+	render->line(render, b->min.x, b->max.y, b->min.z);
+	render->set_pen_position(render, b->max.x, b->min.y, b->min.z);
+	render->line(render, b->max.x, b->max.y, b->min.z);
+	render->set_pen_position(render, b->max.x, b->min.y, b->max.z);
+	render->line(render, b->max.x, b->max.y, b->max.z);
+	render->set_pen_position(render, b->min.x, b->min.y, b->max.z);
+	render->line(render, b->min.x, b->max.y, b->max.z);
 
 	if (!q3__aabb_node_is_leaf(n)) {
 		q3__dynamic_aabb_tree_render_node(self, render, n->left);
@@ -2456,12 +2467,12 @@ q3_aabb_t *q3_dynamic_aabb_tree_get_fat_aabb(q3_dynamic_aabb_tree_t *self, q3_i3
 
 void q3_dynamic_aabb_tree_render(q3_dynamic_aabb_tree_t *self, q3_render_t *render) {
 	if (self->m_root != Q3_AABB_NULL_NODE) {
-		render->set_pen_color(0.5f, 0.5f, 1.0f, 1.f);
+		render->set_pen_color(render, 0.5f, 0.5f, 1.0f, 1.f);
 		q3__dynamic_aabb_tree_render_node(self, render, self->m_root);
 	}
 }
 
-void q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, void *cb, q3_aabb_t *aabb) {
+void q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, q3_query_i *cb, q3_aabb_t *aabb) {
 #define k_stack_capacity 256
 	q3_i32 stack[k_stack_capacity];
 	q3_i32 sp = 1;
@@ -2477,10 +2488,9 @@ void q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, void *cb, q3_
 		q3_aabb_node_t *n = self->m_nodes + id;
 		if (q3_aabb_to_aabb(aabb, &n->aabb)) {
 			if (q3__aabb_node_is_leaf(n)) {
-                // TODO
-				// if (!cb->tree_call_back(id)) {
-				// 	return;
-				// }
+				if (!cb->tree_callback(cb, id)) {
+					return;
+				}
 			}
 			else {
 				stack[sp++] = n->left;
@@ -2491,7 +2501,7 @@ void q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, void *cb, q3_
 #undef k_stack_capacity
 }
 
-void q3_dynamic_aabb_tree_query_raycast(q3_dynamic_aabb_tree_t *self, void *cb, q3_raycast_data_t *ray_cast) {
+void q3_dynamic_aabb_tree_query_raycast(q3_dynamic_aabb_tree_t *self, q3_query_i *cb, q3_raycast_data_t *ray_cast) {
 #define k_stack_capacity 256
 	const q3_r32 k_epsilon = 1.0e-6f;
 	q3_i32 stack[k_stack_capacity];
@@ -2553,10 +2563,9 @@ void q3_dynamic_aabb_tree_query_raycast(q3_dynamic_aabb_tree_t *self, void *cb, 
         }
 
 		if (q3__aabb_node_is_leaf(n)) {
-            // TODO
-			// if (!cb->tree_call_back(id)) {
-			// 	return;
-			// }
+            if (!cb->tree_callback(cb, id)) {
+                return;
+            }
 		}
 		else {
 			stack[sp++] = n->left;
@@ -2588,5 +2597,1127 @@ void q3_dynamic_aabb_tree_validate(q3_dynamic_aabb_tree_t *self) {
 		q3__dynamic_aabb_tree_validate_structure(self, self->m_root);
 #endif
 	}
+}
+
+void q3__broad_phase_buffer_move(q3_broad_phase_t *self, q3_i32 id) {
+	if (self->m_move_count == self->m_move_capacity) {
+		q3_i32* old_buffer = self->m_move_buffer;
+		self->m_move_capacity *= 2;
+		self->m_move_buffer = q3_alloc(self->m_move_capacity * sizeof(q3_i32));
+		memcpy(self->m_move_buffer, old_buffer, self->m_move_count * sizeof(q3_i32));
+		q3_free(old_buffer);
+	}
+
+	self->m_move_buffer[self->m_move_count++] = id;
+}
+
+static inline int q3__broad_phase_contact_pair_sort(const void *left, const void *right) {
+    const q3_contact_pair_t *lhs = left;
+    const q3_contact_pair_t *rhs = right;
+	if (lhs->A < rhs->A) {
+		return true;
+    }
+
+	if (lhs->A == rhs->A) {
+		return lhs->B < rhs->B;
+    }
+
+	return false;
+}
+
+q3_broad_phase_t q3_broad_phase_init(q3_contact_manager_t *manager) {
+    q3_broad_phase_t out = {
+        .m_interface.tree_callback = q3_broad_phase_tree_call_back,
+        .m_manager = manager,
+        .m_pair_capacity = 64,
+        .m_move_capacity = 64,
+		.m_tree = q3_dynamic_aabb_tree_init(),
+    };
+
+	out.m_pair_buffer = q3_alloc(out.m_pair_capacity * sizeof(q3_contact_pair_t));
+	out.m_move_buffer = q3_alloc(out.m_move_capacity * sizeof(q3_i32));
+
+    return out;
+}
+
+void q3_broad_phase_destroy(q3_broad_phase_t *self) {
+	q3_free(self->m_move_buffer);
+	q3_free(self->m_pair_buffer);
+}
+
+void q3_broad_phase_insert_box(q3_broad_phase_t *self, q3_box_t *shape, q3_aabb_t *aabb) {
+	q3_i32 id = q3_dynamic_aabb_tree_insert(&self->m_tree, aabb, shape);
+	shape->broad_phase_index = id;
+	q3__broad_phase_buffer_move(self, id);
+}
+
+void q3_broad_phase_remove_box(q3_broad_phase_t *self, q3_box_t *shape) {
+    q3_dynamic_aabb_tree_remove(&self->m_tree, shape->broad_phase_index);
+}
+
+void q3_broad_phase_update_pairs(q3_broad_phase_t *self) {
+	self->m_pair_count = 0;
+
+	// Query the tree with all moving boxs
+	for (q3_i32 i = 0; i < self->m_move_count; ++i)
+	{
+		self->m_current_index = self->m_move_buffer[i];
+        q3_aabb_t *aabb = q3_dynamic_aabb_tree_get_fat_aabb(&self->m_tree, self->m_current_index);
+
+		// @TODO: Use a static and non-static tree and query one against the other.
+		//        This will potentially prevent (gotta think about this more) time
+		//        wasted with queries of static bodies against static bodies, and
+		//        kinematic to kinematic.
+        q3_dynamic_aabb_tree_query_aabb(&self->m_tree, (q3_query_i*)self, aabb);
+	}
+
+	// Reset the move buffer
+	self->m_move_count = 0;
+
+	// Sort pairs to expose duplicates
+    qsort(self->m_pair_buffer, self->m_pair_count, sizeof(*self->m_pair_buffer), q3__broad_phase_contact_pair_sort);
+
+	// Queue manifolds for solving
+	{
+		q3_i32 i = 0;
+		while (i < self->m_pair_count) {
+			// Add contact to manager
+			q3_contact_pair_t* pair = self->m_pair_buffer + i;
+			q3_box_t *A = q3_dynamic_aabb_tree_get_user_data(&self->m_tree, pair->A);
+			q3_box_t *B = q3_dynamic_aabb_tree_get_user_data(&self->m_tree, pair->B);
+            q3_contact_manager_add_contact(self->m_manager, A, B);
+
+			++i;
+
+			// Skip duplicate pairs by iterating i until we find a unique pair
+			while (i < self->m_pair_count) {
+				q3_contact_pair_t* potential_dup = self->m_pair_buffer + i;
+
+				if (pair->A != potential_dup->A || pair->B != potential_dup->B) {
+					break;
+                }
+
+				++i;
+			}
+		}
+	}
+
+    q3_dynamic_aabb_tree_validate(&self->m_tree);
+}
+
+void q3_broad_phase_update(q3_broad_phase_t *self, q3_i32 id, q3_aabb_t *aabb) {
+	if (q3_dynamic_aabb_tree_update(&self->m_tree, id, aabb)) {
+        q3__broad_phase_buffer_move(self, id);
+    }
+}
+
+bool q3_broad_phase_test_overlap(q3_broad_phase_t *self, q3_i32 a, q3_i32 b) {
+    return q3_aabb_to_aabb(
+        q3_dynamic_aabb_tree_get_fat_aabb(&self->m_tree, a),
+        q3_dynamic_aabb_tree_get_fat_aabb(&self->m_tree, b)
+    );
+}
+
+//--------------------------------------------------------------------------------------------------
+// q3Contact_manager
+//--------------------------------------------------------------------------------------------------
+
+void q3_contact_manager_init(q3_contact_manager_t *self, q3_stack_t *stack) {
+    self->m_stack = stack;
+    self->m_allocator = q3_paged_allocator_init(sizeof(q3_contact_constraint_t), 256);
+    self->m_broadphase = q3_broad_phase_init(self);
+}
+
+void q3_contact_manager_add_contact(q3_contact_manager_t *self, q3_box_t *a, q3_box_t *b) {
+	q3_body_t *body_a = a->body;
+	q3_body_t *body_b = b->body;
+	if (!q3_body_can_collide(body_a, body_b)) {
+		return;
+    }
+
+	// Search for existing matching contact
+	// Return if found duplicate to avoid duplicate constraints
+	// Mark pre-existing duplicates as active
+	q3_contact_edge_t* edge = a->body->m_contact_list;
+	while (edge) {
+		if (edge->other == body_b) {
+			q3_box_t *shape_a = edge->constraint->A;
+			q3_box_t *shape_b = edge->constraint->B;
+
+			// @TODO: Verify this against Box2D; not sure if this is all we need here
+			if((a == shape_a) && (b == shape_b)) {
+				return;
+            }
+		}
+
+		edge = edge->next;
+	}
+
+	// Create new contact
+	q3_contact_constraint_t *contact = q3_paged_allocator_allocate(&self->m_allocator);
+	contact->A = a;
+	contact->B = b;
+	contact->body_a = a->body;
+	contact->body_b = b->body;
+    q3_manifold_set_pair(&contact->manifold, a, b);
+	contact->m_flags = 0;
+	contact->friction = q3_mix_friction(a, b);
+	contact->restitution = q3_mix_restitution(a, b);
+	contact->manifold.contact_count = 0;
+
+	for (q3_i32 i = 0; i < 8; ++i) {
+		contact->manifold.contacts[i].warm_started = 0;
+    }
+
+	contact->prev = NULL;
+	contact->next = self->m_contact_list;
+	if (self->m_contact_list) {
+		self->m_contact_list->prev = contact;
+    }
+	self->m_contact_list = contact;
+
+	// Connect A
+	contact->edge_a.constraint = contact;
+	contact->edge_a.other = body_b;
+
+	contact->edge_a.prev = NULL;
+	contact->edge_a.next = body_a->m_contact_list;
+	if (body_a->m_contact_list) {
+		body_a->m_contact_list->prev = &contact->edge_a;
+    }
+	body_a->m_contact_list = &contact->edge_a;
+
+	// Connect B
+	contact->edge_b.constraint = contact;
+	contact->edge_b.other = body_a;
+
+	contact->edge_b.prev = NULL;
+	contact->edge_b.next = body_b->m_contact_list;
+	if (body_b->m_contact_list) {
+		body_b->m_contact_list->prev = &contact->edge_b;
+    }
+	body_b->m_contact_list = &contact->edge_b;
+
+	q3_body_set_to_awake(body_a);
+	q3_body_set_to_awake(body_b);
+
+	++self->m_contact_count;
+}
+
+void q3_contact_manager_find_new_contacts(q3_contact_manager_t *self) {
+    q3_broad_phase_update_pairs(&self->m_broadphase);
+}
+
+void q3_contact_manager_remove_contact(q3_contact_manager_t *self, q3_contact_constraint_t *contact) {
+	q3_body_t *A = contact->body_a;
+	q3_body_t *B = contact->body_b;
+
+	// Remove from A
+	if (contact->edge_a.prev) {
+		contact->edge_a.prev->next = contact->edge_a.next;
+    }
+
+	if (contact->edge_a.next) {
+		contact->edge_a.next->prev = contact->edge_a.prev;
+    }
+
+	if (&contact->edge_a == A->m_contact_list) {
+		A->m_contact_list = contact->edge_a.next;
+    }
+
+	// Remove from B
+	if (contact->edge_b.prev) {
+		contact->edge_b.prev->next = contact->edge_b.next;
+    }
+
+	if (contact->edge_b.next) {
+		contact->edge_b.next->prev = contact->edge_b.prev;
+    }
+
+	if (&contact->edge_b == B->m_contact_list) {
+		B->m_contact_list = contact->edge_b.next;
+    }
+
+	q3_body_set_to_awake(A);
+	q3_body_set_to_awake(B);
+
+	// Remove contact from the manager
+	if (contact->prev) {
+		contact->prev->next = contact->next;
+    }
+
+	if (contact->next) {
+		contact->next->prev = contact->prev;
+    }
+
+	if (contact == self->m_contact_list) {
+		self->m_contact_list = contact->next;
+    }
+
+	--self->m_contact_count;
+
+    q3_paged_allocator_free(&self->m_allocator, contact);
+}
+
+void q3_contact_manager_remove_contacts_from_body(q3_contact_manager_t *self, q3_body_t *body) {
+	q3_contact_edge_t* edge = body->m_contact_list;
+
+	while(edge) {
+		q3_contact_edge_t* next = edge->next;
+        q3_contact_manager_remove_contact(self, edge->constraint);
+		edge = next;
+	}
+}
+
+void q3_contact_manager_remove_from_broadphase(q3_contact_manager_t *self, q3_body_t *body) {
+	q3_box_t* box = body->m_boxes;
+
+	while (box) {
+        q3_broad_phase_remove_box(&self->m_broadphase, box);
+		box = box->next;
+	}
+}
+
+void q3_contact_manager_test_collisions(q3_contact_manager_t *self) {
+	q3_contact_constraint_t* constraint = self->m_contact_list;
+
+	while(constraint) {
+		q3_box_t *A = constraint->A;
+		q3_box_t *B = constraint->B;
+		q3_body_t *body_a = A->body;
+		q3_body_t *body_b = B->body;
+
+		constraint->m_flags &= ~Q3_ISLAND;
+
+		if(!q3_body_is_awake(body_a) && !q3_body_is_awake(body_b)) {
+			constraint = constraint->next;
+			continue;
+		}
+
+        if (!q3_body_can_collide(body_a, body_b)) {
+			q3_contact_constraint_t* next = constraint->next;
+            q3_contact_manager_remove_contact(self, constraint);
+			constraint = next;
+			continue;
+		}
+
+		// Check if contact should persist
+		if (!q3_broad_phase_test_overlap(&self->m_broadphase, A->broad_phase_index, B->broad_phase_index)) {
+			q3_contact_constraint_t* next = constraint->next;
+            q3_contact_manager_remove_contact(self, constraint);
+			constraint = next;
+			continue;
+		}
+		q3_manifold_t* manifold = &constraint->manifold;
+		q3_manifold_t old_manifold = constraint->manifold;
+		q3_vec3_t ot0 = old_manifold.tangent_vectors[0];
+		q3_vec3_t ot1 = old_manifold.tangent_vectors[1];
+		q3_contact_constraint_solve_collision(constraint);
+		q3_compute_basis(manifold->normal, manifold->tangent_vectors, manifold->tangent_vectors + 1);
+
+		for (q3_i32 i = 0; i < manifold->contact_count; ++i) {
+			q3_contact_t *c = manifold->contacts + i;
+			c->tangent_impulse[0] = c->tangent_impulse[1] = c->normal_impulse = 0.f;
+			q3_u8 old_warm_start = c->warm_started;
+			c->warm_started = 0;
+
+			for (q3_i32 j = 0; j < old_manifold.contact_count; ++j) {
+				q3_contact_t *oc = old_manifold.contacts + j;
+				if (c->fp.key == oc->fp.key) {
+					c->normal_impulse = oc->normal_impulse;
+
+					// Attempt to re-project old friction solutions
+					q3_vec3_t friction = q3_v3add(q3_v3mulf(ot0, oc->tangent_impulse[0]), q3_v3mulf(ot1, oc->tangent_impulse[1]));
+					c->tangent_impulse[0] = q3_dot(friction, manifold->tangent_vectors[0]);
+					c->tangent_impulse[1] = q3_dot(friction, manifold->tangent_vectors[1]);
+					c->warm_started = q3_umax(old_warm_start, old_warm_start + 1);
+					break;
+				}
+			}
+		}
+
+		if (self->m_contact_listener) {
+			q3_i32 now_colliding = constraint->m_flags & Q3_COLLIDING;
+			q3_i32 was_colliding = constraint->m_flags & Q3_WAS_COLLIDING;
+
+			if (now_colliding && !was_colliding) {
+				self->m_contact_listener->begin_contact(self->m_contact_listener, constraint);
+            }
+			else if (!now_colliding && was_colliding) {
+				self->m_contact_listener->end_contact(self->m_contact_listener, constraint);
+            }
+		}
+
+		constraint = constraint->next;
+	}
+}
+
+void q3_contact_manager_render_contacts(q3_contact_manager_t *self, q3_render_t* render) {
+	const q3_contact_constraint_t *contact = self->m_contact_list;
+
+	while (contact) {
+		const q3_manifold_t *m = &contact->manifold;
+
+		if (!(contact->m_flags & Q3_COLLIDING)) {
+			contact = contact->next;
+			continue;
+		}
+
+		for (q3_i32 j = 0; j < m->contact_count; ++j) {
+			const q3_contact_t *c = m->contacts + j;
+			q3_f32 blue = (q3_f32)(255 - c->warm_started) / 255.0f;
+			q3_f32 red = 1.0f - blue;
+			render->set_scale(render, 10.0f, 10.0f, 10.0f);
+			render->set_pen_color(render, red, blue, blue, 1.f);
+			render->set_pen_position(render, c->position.x, c->position.y, c->position.z);
+			render->point(render);
+
+			if (q3_body_is_awake(m->A->body)) {
+				render->set_pen_color(render, 1.0f, 1.0f, 1.0f, 1.f);
+            }
+			else {
+				render->set_pen_color(render, 0.2f, 0.2f, 0.2f, 1.f);
+            }
+
+			render->set_pen_position(render, c->position.x, c->position.y, c->position.z);
+			render->line(
+                render, 
+				c->position.x + m->normal.x * 0.5f,
+				c->position.y + m->normal.y * 0.5f,
+				c->position.z + m->normal.z * 0.5f
+          );
+		}
+
+		contact = contact->next;
+	}
+
+	render->set_scale(render, 1.0f, 1.0f, 1.0f);
+}
+
+//--------------------------------------------------------------------------------------------------
+// q3Contact_solver
+//--------------------------------------------------------------------------------------------------
+
+void q3_contact_solver_initialize(q3_contact_solver_t *self, q3_island_t *island) {
+	self->m_island = island;
+	self->m_contact_count = island->m_contact_count;
+	self->m_contacts = island->m_contact_states;
+	self->m_velocities = self->m_island->m_velocities;
+	self->m_enable_friction = island->m_enable_friction;
+}
+
+void q3_contact_solver_shut_down(q3_contact_solver_t *self) {
+	for (q3_i32 i = 0; i < self->m_contact_count; ++i) {
+		q3_contact_constraint_state_t *c = self->m_contacts + i;
+		q3_contact_constraint_t *cc = self->m_island->m_contacts[i];
+
+		for (q3_i32 j = 0; j < c->contact_count; ++j) {
+			q3_contact_t *oc = cc->manifold.contacts + j;
+			q3_contact_state_t *cs = c->contacts + j;
+			oc->normal_impulse = cs->normal_impulse;
+			oc->tangent_impulse[0] = cs->tangent_impulse[0];
+			oc->tangent_impulse[1] = cs->tangent_impulse[1];
+		}
+	}
+}
+
+void q3_contact_solver_pre_solve(q3_contact_solver_t *self, q3_r32 dt) {
+	for (q3_i32 i = 0; i < self->m_contact_count; ++i) {
+		q3_contact_constraint_state_t *cs = self->m_contacts + i;
+
+		q3_vec3_t v_a = self->m_velocities[cs->index_a].v;
+		q3_vec3_t w_a = self->m_velocities[cs->index_a].w;
+		q3_vec3_t v_b = self->m_velocities[cs->index_b].v;
+		q3_vec3_t w_b = self->m_velocities[cs->index_b].w;
+
+		for (q3_i32 j = 0; j < cs->contact_count; ++j) {
+			q3_contact_state_t *c = cs->contacts + j;
+
+			// Precalculate JM^-1JT for contact and friction constraints
+			q3_vec3_t ra_cn = q3_cross(c->ra, cs->normal);
+			q3_vec3_t rb_cn = q3_cross(c->rb, cs->normal);
+			q3_r32 nm = cs->m_a + cs->m_b;
+			q3_r32 tm[2];
+			tm[0] = nm;
+			tm[1] = nm;
+
+			nm += q3_dot(ra_cn, q3_m3mulv3(&cs->i_a, ra_cn)) + q3_dot(rb_cn, q3_m3mulv3(&cs->i_b, rb_cn));
+			c->normal_mass = q3_invert(nm);
+
+			for (q3_i32 k = 0; k < 2; ++k) {
+				q3_vec3_t ra_ct = q3_cross(cs->tangent_vectors[k], c->ra);
+				q3_vec3_t rb_ct = q3_cross(cs->tangent_vectors[k], c->rb);
+				tm[k] += q3_dot(ra_ct, q3_m3mulv3(&cs->i_a, ra_ct)) + q3_dot(rb_ct, q3_m3mulv3(&cs->i_b, rb_ct));
+				c->tangent_mass[k] = q3_invert(tm[k]);
+			}
+
+			// Precalculate bias factor
+			c->bias = -Q3_BAUMGARTE * (1.f / dt) * q3_rmin(0.f, c->penetration + Q3_PENETRATION_SLOP);
+
+			// Warm start contact
+			q3_vec3_t P = q3_v3mulf(cs->normal, c->normal_impulse);
+
+			if (self->m_enable_friction) {
+				P = q3_v3add(P, q3_v3mulf(cs->tangent_vectors[0], c->tangent_impulse[0]));
+				P = q3_v3add(P, q3_v3mulf(cs->tangent_vectors[1], c->tangent_impulse[1]));
+			}
+
+			v_a = q3_v3sub(v_a, q3_v3mulf(P, cs->m_a));
+			w_a = q3_v3sub(w_a, q3_m3mulv3(&cs->i_a, q3_cross(c->ra, P)));
+
+			v_b = q3_v3add(v_b, q3_v3mulf(P, cs->m_b));
+			w_b = q3_v3add(w_b, q3_m3mulv3(&cs->i_b, q3_cross(c->rb, P)));
+
+			// Add in restitution bias
+			// r32 dv = dot(v_b + cross(w_b, c->rb) - v_a - cross(w_a, c->ra), cs->normal);
+			q3_r32 dv = q3_dot(
+                q3_v3sub(
+                    q3_v3sub(
+                        q3_v3add(v_b, q3_cross(w_b, c->rb)), 
+                        v_a
+                   ), 
+                    q3_cross(w_a, c->ra)
+               ), 
+                cs->normal
+           );
+
+			if (dv < -1.f) {
+				c->bias += -(cs->restitution) * dv;
+            }
+		}
+
+		self->m_velocities[cs->index_a].v = v_a;
+		self->m_velocities[cs->index_a].w = w_a;
+		self->m_velocities[cs->index_b].v = v_b;
+		self->m_velocities[cs->index_b].w = w_b;
+	}
+}
+
+void q3_contact_solver_solve(q3_contact_solver_t *self) {
+	for (q3_i32 i = 0; i < self->m_contact_count; ++i) {
+		q3_contact_constraint_state_t *cs = self->m_contacts + i;
+
+		q3_vec3_t v_a = self->m_velocities[cs->index_a].v;
+		q3_vec3_t w_a = self->m_velocities[cs->index_a].w;
+		q3_vec3_t v_b = self->m_velocities[cs->index_b].v;
+		q3_vec3_t w_b = self->m_velocities[cs->index_b].w;
+
+		for (q3_i32 j = 0; j < cs->contact_count; ++j) {
+			q3_contact_state_t *c = cs->contacts + j;
+
+			// relative velocity at contact
+			// q3_vec3_t dv = v_b + q3_cross(w_b, c->rb) - v_a - q3_cross(w_a, c->ra);
+            q3_vec3_t dv = q3_v3sub(
+               q3_v3sub(
+                   q3_v3add(v_b, q3_cross(w_b, c->rb)), 
+                   v_a
+               ), 
+               q3_cross(w_a, c->ra)
+            );
+
+			// Friction
+			if (self->m_enable_friction) {
+				for (q3_i32 k = 0; k < 2; ++k) {
+					q3_r32 lambda = -q3_dot(dv, cs->tangent_vectors[k]) * c->tangent_mass[k];
+
+					// Calculate frictional impulse
+					q3_r32 max_lambda = cs->friction * c->normal_impulse;
+
+					// Clamp frictional impulse
+					q3_r32 old_p_t = c->tangent_impulse[k];
+					c->tangent_impulse[k] = q3_clamp(-max_lambda, max_lambda, old_p_t + lambda);
+					lambda = c->tangent_impulse[k] - old_p_t;
+
+					// Apply friction impulse
+					q3_vec3_t impulse = q3_v3mulf(cs->tangent_vectors[k], lambda);
+					v_a = q3_v3sub(v_a, q3_v3mulf(impulse, cs->m_a));
+					w_a = q3_v3sub(w_a, q3_m3mulv3(&cs->i_a, q3_cross(c->ra, impulse)));
+
+					v_b = q3_v3add(v_b, q3_v3mulf(impulse, cs->m_b));
+					w_b = q3_v3add(w_b, q3_m3mulv3(&cs->i_b, q3_cross(c->rb, impulse)));
+				}
+			}
+
+			// Normal
+			{
+                dv = q3_v3sub(
+                    q3_v3sub(
+                        q3_v3add(v_b, q3_cross(w_b, c->rb)), 
+                        v_a
+                   ), 
+                    q3_cross(w_a, c->ra)
+               );
+
+				// Normal impulse
+				q3_r32 vn = q3_dot(dv, cs->normal);
+
+				// Factor in positional bias to calculate impulse scalar j
+				q3_r32 lambda = c->normal_mass * (-vn + c->bias);
+
+				// Clamp impulse
+				q3_r32 temp_p_n = c->normal_impulse;
+				c->normal_impulse = q3_rmax(temp_p_n + lambda, 0.f);
+				lambda = c->normal_impulse - temp_p_n;
+
+				// Apply impulse
+                q3_vec3_t impulse = q3_v3mulf(cs->normal, lambda);
+                v_a = q3_v3sub(v_a, q3_v3mulf(impulse, cs->m_a));
+                w_a = q3_v3sub(w_a, q3_m3mulv3(&cs->i_a, q3_cross(c->ra, impulse)));
+
+                v_b = q3_v3add(v_b, q3_v3mulf(impulse, cs->m_b));
+                w_b = q3_v3add(w_b, q3_m3mulv3(&cs->i_b, q3_cross(c->rb, impulse)));
+			}
+		}
+
+		self->m_velocities[cs->index_a].v = v_a;
+		self->m_velocities[cs->index_a].w = w_a;
+		self->m_velocities[cs->index_b].v = v_b;
+		self->m_velocities[cs->index_b].w = w_b;
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+// q3Island
+//--------------------------------------------------------------------------------------------------
+
+void q3_island_solve(q3_island_t *self) {
+	// Apply gravity
+	// Integrate velocities and create state buffers, calculate world inertia
+	for (q3_i32 i = 0 ; i < self->m_body_count; ++i) {
+		q3_body_t *body = self->m_bodies[i];
+		q3_velocity_state_t *v = self->m_velocities + i;
+
+		if (body->m_flags & Q3_BODY_FLAGS_DYNAMIC) {
+            q3_body_apply_linear_force(body, q3_v3mulf(self->m_gravity, body->m_gravity_scale));
+
+			// Calculate world space intertia tensor
+			q3_mat3_t r = body->m_tx.rotation;
+            q3_mat3_t tmp = q3_m3mul(&r, &body->m_inv_inertia_model);
+            r = q3_transpose(&r);
+			body->m_inv_inertia_world = q3_m3mul(&tmp, &r);
+
+			// Integrate velocity
+			body->m_linear_velocity = q3_v3add(body->m_linear_velocity, q3_v3mulf(q3_v3mulf(body->m_force, body->m_inv_mass), self->m_dt));
+			body->m_angular_velocity = q3_v3add(body->m_angular_velocity, q3_v3mulf(q3_m3mulv3(&body->m_inv_inertia_world, body->m_torque), self->m_dt));
+
+			// From Box2D!
+			// Apply damping.
+			// ODE: dv/dt + c * v = 0
+			// Solution: v(t) = v0 * exp(-c * t)
+			// Time step: v(t + dt) = v0 * exp(-c * (t + dt)) = v0 * exp(-c * t) * exp(-c * dt) = v * exp(-c * dt)
+			// v2 = exp(-c * dt) * v1
+			// Pade approximation:
+			// v2 = v1 * 1 / (1 + c * dt)
+			body->m_linear_velocity  = q3_v3mulf(body->m_linear_velocity, 1.f / (1.f + self->m_dt * body->m_linear_damping));
+			body->m_angular_velocity = q3_v3mulf(body->m_angular_velocity, 1.f / (1.f + self->m_dt * body->m_angular_damping));
+		}
+
+		v->v = body->m_linear_velocity;
+		v->w = body->m_angular_velocity;
+	}
+
+	// Create contact solver, pass in state buffers, create buffers for contacts
+	// Initialize velocity constraint for normal + friction and warm start
+	q3_contact_solver_t contact_solver;
+    q3_contact_solver_initialize(&contact_solver, self);
+    q3_contact_solver_pre_solve(&contact_solver, self->m_dt);
+
+	// Solve contacts
+	for (q3_i32 i = 0; i < self->m_iterations; ++i) {
+        q3_contact_solver_solve(&contact_solver);
+    }
+
+    q3_contact_solver_shut_down(&contact_solver);
+
+	// Copy back state buffers
+	// Integrate positions
+	for (q3_i32 i = 0 ; i < self->m_body_count; ++i) {
+		q3_body_t *body = self->m_bodies[i];
+		q3_velocity_state_t *v = self->m_velocities + i;
+
+		if (body->m_flags & Q3_BODY_FLAGS_STATIC) {
+			continue;
+        }
+
+		body->m_linear_velocity = v->v;
+		body->m_angular_velocity = v->w;
+
+		// Integrate position
+		body->m_world_center = q3_v3add(body->m_world_center, q3_v3mulf(body->m_linear_velocity, self->m_dt));
+        q3_quat_integrate(&body->m_q, body->m_angular_velocity, self->m_dt);
+		body->m_q = q3_qnorm(body->m_q);
+		body->m_tx.rotation = q3_quat_to_mat3(body->m_q);
+	}
+
+	if (self->m_allow_sleep) {
+		// Find minimum sleep time of the entire island
+		q3_f32 min_sleep_time = Q3_R32_MAX;
+		for (q3_i32 i = 0; i < self->m_body_count; ++i) {
+			q3_body_t* body = self->m_bodies[i];
+
+			if (body->m_flags & Q3_BODY_FLAGS_STATIC) {
+				continue;
+            }
+
+			const q3_r32 sqr_lin_vel = q3_dot(body->m_linear_velocity, body->m_linear_velocity);
+			const q3_r32 cb_ang_vel = q3_dot(body->m_angular_velocity, body->m_angular_velocity);
+			const q3_r32 lin_tol = Q3_SLEEP_LINEAR;
+			const q3_r32 ang_tol = Q3_SLEEP_ANGULAR;
+
+			if (sqr_lin_vel > lin_tol || cb_ang_vel > ang_tol) {
+				min_sleep_time = 0.f;
+				body->m_sleep_time = 0.f;
+			}
+			else {
+				body->m_sleep_time += self->m_dt;
+				min_sleep_time = q3_rmin(min_sleep_time, body->m_sleep_time);
+			}
+		}
+
+		// Put entire island to sleep so long as the minimum found sleep time
+		// is below the threshold. If the minimum sleep time reaches below the
+		// sleeping threshold, the entire island will be reformed next step
+		// and sleep test will be tried again.
+		if (min_sleep_time > Q3_SLEEP_TIME) {
+			for (q3_i32 i = 0; i < self->m_body_count; ++i) {
+                q3_body_set_to_sleep(self->m_bodies[i]);
+            }
+		}
+	}
+}
+
+void q3_island_add_body(q3_island_t *self, q3_body_t *body) {
+	assert(self->m_body_count < self->m_body_capacity);
+
+	body->m_island_index = self->m_body_count;
+
+	self->m_bodies[self->m_body_count++] = body;
+}
+
+void q3_island_add_costraint(q3_island_t *self, q3_contact_constraint_t *contact) {
+	assert(self->m_contact_count < self->m_contact_capacity);
+
+	self->m_contacts[self->m_contact_count++] = contact;
+}
+
+void q3_island_initialize(q3_island_t *self) {
+	for (q3_i32 i = 0; i < self->m_contact_count; ++i) {
+		q3_contact_constraint_t *cc = self->m_contacts[i];
+
+		q3_contact_constraint_state_t *c = self->m_contact_states + i;
+
+		c->center_a = cc->body_a->m_world_center;
+		c->center_b = cc->body_b->m_world_center;
+		c->i_a = cc->body_a->m_inv_inertia_world;
+		c->i_b = cc->body_b->m_inv_inertia_world;
+		c->m_a = cc->body_a->m_inv_mass;
+		c->m_b = cc->body_b->m_inv_mass;
+		c->restitution = cc->restitution;
+		c->friction = cc->friction;
+		c->index_a = cc->body_a->m_island_index;
+		c->index_b = cc->body_b->m_island_index;
+		c->normal = cc->manifold.normal;
+		c->tangent_vectors[0] = cc->manifold.tangent_vectors[0];
+		c->tangent_vectors[1] = cc->manifold.tangent_vectors[1];
+		c->contact_count = cc->manifold.contact_count;
+
+		for (q3_i32 j = 0; j < c->contact_count; ++j) {
+			q3_contact_state_t *s = c->contacts + j;
+			q3_contact_t *cp = cc->manifold.contacts + j;
+			s->ra = q3_v3sub(cp->position, c->center_a);
+			s->rb = q3_v3sub(cp->position, c->center_b);
+			s->penetration = cp->penetration;
+			s->normal_impulse = cp->normal_impulse;
+			s->tangent_impulse[0] = cp->tangent_impulse[0];
+			s->tangent_impulse[1] = cp->tangent_impulse[1];
+		}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+// q3Scene
+//--------------------------------------------------------------------------------------------------
+
+void q3_scene_init(q3_scene_t *self, q3_scene_desc_t *desc) {
+    if (desc->gravity.x == 0 && desc->gravity.y == 0 && desc->gravity.z == 0) {
+        desc->gravity = (q3_vec3_t){ 0, -9.8f, 0 };
+    }
+
+    if (desc->iterations == 0) {
+        desc->iterations = 20;
+    }
+
+	self->m_heap			= q3_heap_init();
+    self->m_stack           = q3_stack_init();
+    self->m_box_allocator   = q3_paged_allocator_init(sizeof(q3_box_t), 256),
+    self->m_allow_sleep     = true,
+    self->m_enable_friction = true,
+    self->m_dt              = desc->dt,
+    self->m_gravity         = desc->gravity,
+    self->m_iterations      = desc->iterations,
+    q3_contact_manager_init(&self->m_contact_manager, &self->m_stack);
+}
+
+void q3_scene_destroy(q3_scene_t *self) {
+	q3_scene_shutdown(self);
+}
+
+void q3_scene_step(q3_scene_t *self) {
+	if (self->m_new_box) {
+        q3_broad_phase_update_pairs(&self->m_contact_manager.m_broadphase);
+		self->m_new_box = false;
+	}
+
+    q3_contact_manager_test_collisions(&self->m_contact_manager);
+
+	for (q3_body_t* body = self->m_body_list; body; body = body->m_next) {
+		body->m_flags &= ~Q3_BODY_FLAGS_ISLAND;
+    }
+
+	// Size the stack island, pick worst case size
+    q3_stack_reserve(
+        &self->m_stack, 
+		sizeof(q3_body_t*)                    * self->m_body_count                      +
+        sizeof(q3_velocity_state_t)           * self->m_body_count                      +
+        sizeof(q3_contact_constraint_t*)      * self->m_contact_manager.m_contact_count +
+        sizeof(q3_contact_constraint_state_t) * self->m_contact_manager.m_contact_count +
+        sizeof(q3_body_t*)                    * self->m_body_count
+    );
+
+	q3_island_t island = {
+        .m_body_capacity    = self->m_body_count,
+        .m_contact_capacity = self->m_contact_manager.m_contact_count,
+        .m_bodies           = q3_stack_allocate(&self->m_stack, sizeof(q3_body_t*) * self->m_body_count),
+        .m_velocities       = q3_stack_allocate(&self->m_stack, sizeof(q3_velocity_state_t) * self->m_body_count),
+        .m_allow_sleep      = self->m_allow_sleep,
+        .m_enable_friction  = self->m_enable_friction,
+        .m_dt               = self->m_dt,
+        .m_gravity          = self->m_gravity,
+        .m_iterations       = self->m_iterations,
+    };
+
+    island.m_contacts         = q3_stack_allocate(&self->m_stack, sizeof(q3_contact_constraint_t*) * island.m_contact_capacity);
+    island.m_contact_states   = q3_stack_allocate(&self->m_stack, sizeof(q3_contact_constraint_state_t) * island.m_contact_capacity);
+
+	// Build each active island and then solve each built island
+	q3_i32 stack_size = self->m_body_count;
+	q3_body_t** stack = q3_stack_allocate(&self->m_stack, sizeof(q3_body_t*) * stack_size);
+	for (q3_body_t* seed = self->m_body_list; seed; seed = seed->m_next) {
+		// Seed cannot be apart of an island already
+		if (seed->m_flags & Q3_BODY_FLAGS_ISLAND) {
+			continue;
+        }
+
+		// Seed must be awake
+		if (!(seed->m_flags & Q3_BODY_FLAGS_AWAKE)) {
+			continue;
+        }
+
+		// Seed cannot be a static body in order to keep islands
+		// as small as possible
+		if (seed->m_flags & Q3_BODY_FLAGS_STATIC) {
+			continue;
+        }
+
+		q3_i32 stack_count = 0;
+		stack[stack_count++] = seed;
+		island.m_body_count = 0;
+		island.m_contact_count = 0;
+
+		// Mark seed as apart of island
+		seed->m_flags |= Q3_BODY_FLAGS_ISLAND;
+
+		// Perform DFS on constraint graph
+		while(stack_count > 0) {
+			// Decrement stack to implement iterative backtracking
+			q3_body_t *body = stack[--stack_count];
+            q3_island_add_body(&island, body);
+
+			// Awaken all bodies connected to the island
+            q3_body_set_to_awake(body);
+
+			// Do not search across static bodies to keep island
+			// formations as small as possible, however the static
+			// body itself should be apart of the island in order
+			// to properly represent a full contact
+			if (body->m_flags & Q3_BODY_FLAGS_STATIC) {
+				continue;
+            }
+
+			// Search all contacts connected to this body
+			q3_contact_edge_t* contacts = body->m_contact_list;
+			for (q3_contact_edge_t* edge = contacts; edge; edge = edge->next) {
+				q3_contact_constraint_t *contact = edge->constraint;
+
+				// Skip contacts that have been added to an island already
+				if (contact->m_flags & Q3_ISLAND) {
+					continue;
+                }
+
+				// Can safely skip this contact if it didn't actually collide with anything
+				if (!(contact->m_flags & Q3_COLLIDING)) {
+					continue;
+                }
+
+				// Skip sensors
+				if (contact->A->sensor || contact->B->sensor) {
+					continue;
+                }
+
+				// Mark island flag and add to island
+				contact->m_flags |= Q3_ISLAND;
+                q3_island_add_costraint(&island, contact);
+
+				// Attempt to add the other body in the contact to the island
+				// to simulate contact awakening propogation
+				q3_body_t* other = edge->other;
+				if (other->m_flags & Q3_BODY_FLAGS_ISLAND) {
+					continue;
+                }
+
+				assert(stack_count < stack_size);
+
+				stack[stack_count++] = other;
+				other->m_flags |= Q3_BODY_FLAGS_ISLAND;
+			}
+		}
+
+		assert(island.m_body_count != 0);
+
+        q3_island_initialize(&island);
+        q3_island_solve(&island);
+
+		// Reset all static island flags
+		// This allows static bodies to participate in other island formations
+		for (q3_i32 i = 0; i < island.m_body_count; i++) {
+			q3_body_t *body = island.m_bodies[i];
+
+			if (body->m_flags & Q3_BODY_FLAGS_STATIC) {
+				body->m_flags &= ~Q3_BODY_FLAGS_ISLAND;
+            }
+		}
+	}
+
+	q3_stack_free(&self->m_stack, stack);
+	q3_stack_free(&self->m_stack, island.m_contact_states);
+	q3_stack_free(&self->m_stack, island.m_contacts);
+	q3_stack_free(&self->m_stack, island.m_velocities);
+	q3_stack_free(&self->m_stack, island.m_bodies);
+
+	// Update the broadphase AABBs
+	for (q3_body_t* body = self->m_body_list; body; body = body->m_next) {
+		if (body->m_flags & Q3_BODY_FLAGS_STATIC) {
+			continue;
+        }
+
+        q3__body_synchronize_proxies(body);
+	}
+
+	// Look for new contacts
+    q3_contact_manager_find_new_contacts(&self->m_contact_manager);
+
+	// Clear all forces
+	for (q3_body_t* body = self->m_body_list; body; body = body->m_next) {
+		body->m_force = q3_v3identity();
+		body->m_torque = q3_v3identity();
+	}
+}
+
+q3_body_t* q3_scene_create_body(q3_scene_t *self, q3_bodydef_t *def) {
+    q3_body_t* body = q3_heap_allocate(&self->m_heap, sizeof(q3_body_t));
+    q3__body_init(body, def, self);
+
+	// Add body to scene body_list
+	body->m_prev = NULL;
+	body->m_next = self->m_body_list;
+
+	if (self->m_body_list) {
+		self->m_body_list->m_prev = body;
+    }
+
+	self->m_body_list = body;
+	++self->m_body_count;
+
+	return body;
+}
+
+void q3_scene_remove_body(q3_scene_t *self, q3_body_t* body) {
+	assert(self->m_body_count > 0);
+
+    q3_contact_manager_remove_contacts_from_body(&self->m_contact_manager, body);
+
+    q3_body_remove_all_boxes(body);
+
+	// Remove body from scene body_list
+	if (body->m_next) {
+		body->m_next->m_prev = body->m_prev;
+    }
+
+	if (body->m_prev) {
+		body->m_prev->m_next = body->m_next;
+    }
+
+	if (body == self->m_body_list) {
+		self->m_body_list = body->m_next;
+    }
+
+	--self->m_body_count;
+
+    q3_heap_free(&self->m_heap, body);
+}
+
+void q3_scene_remove_all_bodies(q3_scene_t *self) {
+	q3_body_t* body = self->m_body_list;
+
+	while (body) {
+		q3_body_t* next = body->m_next;
+
+        q3_body_remove_all_boxes(body);
+        q3_heap_free(&self->m_heap, body);
+
+		body = next;
+	}
+
+	self->m_body_list = NULL;
+}
+
+void q3_scene_set_allow_sleep(q3_scene_t *self, bool allow_sleep) {
+	self->m_allow_sleep = allow_sleep;
+
+	if (!allow_sleep) {
+		for (q3_body_t* body = self->m_body_list; body; body = body->m_next) {
+            q3_body_set_to_awake(body);
+        }
+	}
+}
+
+void q3_scene_set_iterations(q3_scene_t *self, q3_i32 iterations) {
+	self->m_iterations = q3_imax(1, iterations);
+}
+
+void q3_scene_set_enable_friction(q3_scene_t *self, bool enabled) {
+	self->m_enable_friction = enabled;
+}
+
+void q3_scene_render(q3_scene_t *self, q3_render_t* render) {
+	q3_body_t* body = self->m_body_list;
+
+	while (body) {
+        q3_body_render(body, render);
+		body = body->m_next;
+	}
+
+    q3_contact_manager_render_contacts(&self->m_contact_manager, render);
+	//m_contact_manager.m_broadphase.m_tree.Render(render);
+}
+
+void q3_scene_shutdown(q3_scene_t *self) {
+    q3_scene_remove_all_bodies(self);
+
+    q3_paged_allocator_clear(&self->m_box_allocator);
+}
+
+void q3_scene_set_contact_listener(q3_scene_t *self, q3_contact_listener_i* listener) {
+	self->m_contact_manager.m_contact_listener = listener;
+}
+typedef struct q3__scene_query_wrapper q3__scene_query_wrapper;
+struct q3__scene_query_wrapper {
+    q3_query_i interface;
+    q3_query_callback_i *cb;
+    q3_broad_phase_t *broad_phase;
+    q3_aabb_t m_aabb;
+    q3_vec3_t m_point;
+    q3_raycast_data_t *m_ray_cast;
+};
+
+bool q3__scene_query_wrapper_aabb_cb(q3_query_i *interface, q3_i32 id) {
+    q3__scene_query_wrapper *self = (q3__scene_query_wrapper *)interface;
+
+    q3_aabb_t aabb;
+    q3_box_t *box = q3_dynamic_aabb_tree_get_user_data(&self->broad_phase->m_tree, id);
+
+    q3_box_compute_aabb(box, &box->body->m_tx, &aabb);
+
+    if (q3_aabb_to_aabb(&self->m_aabb, &aabb)) {
+        return self->cb->report_shape(self->cb, box);
+    }
+
+    return true;
+}
+
+bool q3__scene_query_wrapper_point_cb(q3_query_i *interface, q3_i32 id) {
+    q3__scene_query_wrapper *self = (q3__scene_query_wrapper *)interface;
+    q3_box_t *box = q3_dynamic_aabb_tree_get_user_data(&self->broad_phase->m_tree, id);
+
+    if (q3_box_test_point(box, &box->body->m_tx, self->m_point)) {
+        return self->cb->report_shape(self->cb, box);
+    }
+
+    return true;
+}
+
+bool q3__scene_query_wrapper_raycast_cb(q3_query_i *interface, q3_i32 id) {
+    q3__scene_query_wrapper *self = (q3__scene_query_wrapper *)interface;
+    q3_box_t *box = q3_dynamic_aabb_tree_get_user_data(&self->broad_phase->m_tree, id);
+
+    if (q3_box_raycast(box, &box->body->m_tx, self->m_ray_cast)) {
+        return self->cb->report_shape(self->cb, box);
+    }
+
+    return true;
+}
+
+void q3_scene_query_aabb(q3_scene_t *self, q3_query_callback_i *cb, q3_aabb_t aabb) {
+	q3__scene_query_wrapper wrapper = {
+        .interface.tree_callback = q3__scene_query_wrapper_aabb_cb, 
+        .m_aabb = aabb,
+        .broad_phase = &self->m_contact_manager.m_broadphase,
+        .cb = cb,
+    };
+    q3_dynamic_aabb_tree_query_aabb(&self->m_contact_manager.m_broadphase.m_tree, (q3_query_i*)&wrapper, &aabb);
+}
+
+void q3_scene_query_point(q3_scene_t *self, q3_query_callback_i *cb, q3_vec3_t point) {
+	q3__scene_query_wrapper wrapper = {
+        .interface.tree_callback = q3__scene_query_wrapper_point_cb, 
+        .m_point = point,
+        .broad_phase = &self->m_contact_manager.m_broadphase,
+        .cb = cb,
+    };
+
+	const q3_r32 k_fattener = 0.5f;
+	q3_aabb_t aabb = {
+        .min = q3_v3subf(point, k_fattener),
+        .max = q3_v3addf(point, k_fattener),
+    };
+    q3_dynamic_aabb_tree_query_aabb(&self->m_contact_manager.m_broadphase.m_tree, (q3_query_i*)&wrapper, &aabb);
+}
+
+void q3_scene_ray_cast(q3_scene_t *self, q3_query_callback_i *cb, q3_raycast_data_t *ray_cast) {
+	q3__scene_query_wrapper wrapper = {
+        .interface.tree_callback = q3__scene_query_wrapper_raycast_cb, 
+        .broad_phase = &self->m_contact_manager.m_broadphase,
+        .cb = cb,
+        .m_ray_cast = ray_cast,
+    };
+    
+    q3_dynamic_aabb_tree_query_raycast(&self->m_contact_manager.m_broadphase.m_tree, (q3_query_i*)&wrapper, ray_cast);
+}
+
+void q3_scene_dump(q3_scene_t *self, FILE* file) {
+	fprintf(file, "// Ensure 64/32-bit memory compatability with the dump contents\n");
+	fprintf(file, "assert(sizeof(int*) == %llu);\n", sizeof(int*));
+	fprintf(file, "scene.Set_gravity(q3_vec3_t(%.15lf, %.15lf, %.15lf));\n", self->m_gravity.x, self->m_gravity.y, self->m_gravity.z);
+	fprintf(file, "scene.Set_allow_sleep(%s);\n", self->m_allow_sleep ? "true" : "false");
+	fprintf(file, "scene.Set_enable_friction(%s);\n", self->m_enable_friction ? "true" : "false");
+
+	fprintf(file, "q3_body_t** bodies = (q3_body_t**)q3_alloc(sizeof(q3_body_t*) * %d);\n", self->m_body_count);
+
+	q3_i32 i = 0;
+	for (q3_body_t* body = self->m_body_list; body; body = body->m_next, ++i) {
+        q3_body_dump(body, file, i);
+	}
+
+	fprintf(file, "q3_free(bodies);\n");
 }
 

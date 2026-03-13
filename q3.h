@@ -31,20 +31,21 @@ typedef struct q3_contact_edge_t q3_contact_edge_t;
 //--------------------------------------------------------------------------------------------------
 // Internal Implementation Constants (do not change unless you know what you're doing)
 //--------------------------------------------------------------------------------------------------
-#define Q3_SLEEP_LINEAR     (q3_r32){ 0.01 }
-#define Q3_SLEEP_ANGULAR    (q3_r32){ (3.0 / 180.0) * q3PI }
-#define Q3_SLEEP_TIME       (q3_r32){ 0.5 }
-#define Q3_BAUMGARTE        (q3_r32){ 0.2 }
-#define Q3_PENETRATION_SLOP (q3_r32){ 0.05 }
+#define Q3_SLEEP_LINEAR     (0.01f)
+#define Q3_SLEEP_ANGULAR    ((3.0f / 180.0f) * Q3_PI)
+#define Q3_SLEEP_TIME       (0.5f)
+#define Q3_BAUMGARTE        (0.2f)
+#define Q3_PENETRATION_SLOP (0.05f)
 
 //--------------------------------------------------------------------------------------------------
 // Memory Macros
 //--------------------------------------------------------------------------------------------------
-inline void* q3_alloc(q3_i32 bytes) {
-	return malloc(bytes);
+static inline void* q3_alloc(q3_i32 bytes) {
+	return calloc(1, bytes);
+	// return malloc(bytes);
 }
 
-inline void q3_free(void* memory) {
+static inline void q3_free(void* memory) {
 	free(memory);
 }
 
@@ -156,21 +157,21 @@ void  q3_paged_allocator_clear(q3_paged_allocator_t *self);
 // Math Utils
 //--------------------------------------------------------------------------------------------------
 
-inline void   q3_swap(q3_r32 *a, q3_r32 *b);
-inline void   q3_uswap(q3_u8 *a, q3_u8 *b);
-inline q3_r32 q3_invert(q3_r32 a);
-inline q3_r32 q3_sign(q3_r32 a);
-inline q3_r32 q3_abs(q3_r32 a);
-inline q3_r32 q3_imin(q3_i32 a, q3_i32 b);
-inline q3_r32 q3_rmin(q3_r32 a, q3_r32 b);
-inline q3_r32 q3_imax(q3_i32 a, q3_i32 b);
-inline q3_r32 q3_rmax(q3_r32 a, q3_r32 b);
-inline q3_r32 q3_umax(q3_u8 a, q3_u8 b);
-inline q3_r32 q3_clamp01(q3_r32 val);
-inline q3_r32 q3_clamp(q3_r32 min, q3_r32 max, q3_r32 a);
-inline q3_r32 q3_lerp(q3_r32 a, q3_r32 b, q3_r32 t);
-inline q3_r32 q3_random_float(q3_r32 l, q3_r32 h);
-inline q3_r32 q3_random_int(q3_i32 low, q3_i32 high);
+static inline void   q3_swap(q3_r32 *a, q3_r32 *b);
+static inline void   q3_uswap(q3_u8 *a, q3_u8 *b);
+static inline q3_r32 q3_invert(q3_r32 a);
+static inline q3_r32 q3_sign(q3_r32 a);
+static inline q3_r32 q3_abs(q3_r32 a);
+static inline q3_i32 q3_imin(q3_i32 a, q3_i32 b);
+static inline q3_r32 q3_rmin(q3_r32 a, q3_r32 b);
+static inline q3_i32 q3_imax(q3_i32 a, q3_i32 b);
+static inline q3_r32 q3_rmax(q3_r32 a, q3_r32 b);
+static inline q3_u8  q3_umax(q3_u8 a, q3_u8 b);
+static inline q3_r32 q3_clamp01(q3_r32 val);
+static inline q3_r32 q3_clamp(q3_r32 min, q3_r32 max, q3_r32 a);
+static inline q3_r32 q3_lerp(q3_r32 a, q3_r32 b, q3_r32 t);
+static inline q3_r32 q3_random_float(q3_r32 l, q3_r32 h);
+static inline q3_i32 q3_random_int(q3_i32 low, q3_i32 high);
 
 //--------------------------------------------------------------------------------------------------
 // q3Vec3
@@ -203,22 +204,22 @@ q3_vec3_t q3_v3mulf(q3_vec3_t vec, q3_r32 f);
 q3_vec3_t q3_v3divf(q3_vec3_t vec, q3_r32 f);
 q3_vec3_t q3_v3neg(q3_vec3_t vec);
 
-inline q3_vec3_t q3_v3identity(void);
-inline q3_vec3_t q3_v3mul(q3_vec3_t left, q3_vec3_t right);
-inline q3_vec3_t q3_v3div(q3_vec3_t left, q3_vec3_t right);
-inline q3_r32 q3_dot(q3_vec3_t a, q3_vec3_t b);
-inline q3_vec3_t q3_cross(q3_vec3_t a, q3_vec3_t b);
-inline q3_r32 q3_length(q3_vec3_t v);
-inline q3_r32 q3_lengthsq(q3_vec3_t v);
-inline q3_vec3_t q3_norm(q3_vec3_t v);
-inline q3_r32 q3_distance(q3_vec3_t a, q3_vec3_t b);
-inline q3_r32 q3_distancesq(q3_vec3_t a, q3_vec3_t b);
-inline q3_vec3_t q3_v3abs(q3_vec3_t v);
-inline q3_vec3_t q3_v3min(q3_vec3_t a, q3_vec3_t b);
-inline q3_vec3_t q3_v3max(q3_vec3_t a, q3_vec3_t b);
-inline q3_r32 q3_min_per_elem(q3_vec3_t a);
-inline q3_r32 q3_max_per_elem(q3_vec3_t a);
-inline q3_vec3_t q3_v3lerp(q3_vec3_t a, q3_vec3_t b, q3_r32 t);
+static inline q3_vec3_t q3_v3identity(void);
+static inline q3_vec3_t q3_v3mul(q3_vec3_t left, q3_vec3_t right);
+static inline q3_vec3_t q3_v3div(q3_vec3_t left, q3_vec3_t right);
+static inline q3_r32 q3_dot(q3_vec3_t a, q3_vec3_t b);
+static inline q3_vec3_t q3_cross(q3_vec3_t a, q3_vec3_t b);
+static inline q3_r32 q3_length(q3_vec3_t v);
+static inline q3_r32 q3_lengthsq(q3_vec3_t v);
+static inline q3_vec3_t q3_norm(q3_vec3_t v);
+static inline q3_r32 q3_distance(q3_vec3_t a, q3_vec3_t b);
+static inline q3_r32 q3_distancesq(q3_vec3_t a, q3_vec3_t b);
+static inline q3_vec3_t q3_v3abs(q3_vec3_t v);
+static inline q3_vec3_t q3_v3min(q3_vec3_t a, q3_vec3_t b);
+static inline q3_vec3_t q3_v3max(q3_vec3_t a, q3_vec3_t b);
+static inline q3_r32 q3_min_per_elem(q3_vec3_t a);
+static inline q3_r32 q3_max_per_elem(q3_vec3_t a);
+static inline q3_vec3_t q3_v3lerp(q3_vec3_t a, q3_vec3_t b, q3_r32 t);
 
 //--------------------------------------------------------------------------------------------------
 // q3Mat3
@@ -255,15 +256,15 @@ q3_vec3_t q3_mat3_column0(q3_mat3_t *self);
 q3_vec3_t q3_mat3_column1(q3_mat3_t *self);
 q3_vec3_t q3_mat3_column2(q3_mat3_t *self);
 
-inline q3_mat3_t q3_m3identity(void);
-inline q3_mat3_t q3_rotate(q3_vec3_t x, q3_vec3_t y, q3_vec3_t z);
-inline q3_mat3_t q3_transpose(q3_mat3_t *m);
-inline void q3_mat3_zero(q3_mat3_t *m);
-inline q3_mat3_t q3_diagonalf(q3_r32 a);
-inline q3_mat3_t q3_diagonal(q3_r32 a, q3_r32 b, q3_r32 c);
-inline q3_mat3_t q3_outer_product(q3_vec3_t u, q3_vec3_t v);
-inline q3_mat3_t q3_covariance(q3_vec3_t *points, q3_u32 num_points);
-inline q3_mat3_t q3_inverse(q3_mat3_t *m);
+static inline q3_mat3_t q3_m3identity(void);
+static inline q3_mat3_t q3_rotate(q3_vec3_t x, q3_vec3_t y, q3_vec3_t z);
+static inline q3_mat3_t q3_transpose(q3_mat3_t *m);
+static inline void q3_mat3_zero(q3_mat3_t *m);
+static inline q3_mat3_t q3_diagonalf(q3_r32 a);
+static inline q3_mat3_t q3_diagonal(q3_r32 a, q3_r32 b, q3_r32 c);
+static inline q3_mat3_t q3_outer_product(q3_vec3_t u, q3_vec3_t v);
+static inline q3_mat3_t q3_covariance(q3_vec3_t *points, q3_u32 num_points);
+static inline q3_mat3_t q3_inverse(q3_mat3_t *m);
 
 //--------------------------------------------------------------------------------------------------
 // q3Quaterion
@@ -286,12 +287,12 @@ struct q3_quat_t {
 
 q3_quat_t q3_quat_from_angle(q3_vec3_t axis, q3_r32 radians);
 void q3_quat_set(q3_quat_t *self, q3_vec3_t axis, q3_r32 radians);
-void q3_quat_toaxisangle(q3_quat_t self, q3_vec3_t* axis, q3_r32* angle);
+void q3_quat_to_axis_angle(q3_quat_t self, q3_vec3_t* axis, q3_r32* angle);
 void q3_quat_integrate(q3_quat_t *self, q3_vec3_t dv, q3_r32 dt);
 q3_quat_t q3_qmul(q3_quat_t left, q3_quat_t right);
 q3_mat3_t q3_quat_to_mat3(q3_quat_t quat);
 
-inline q3_quat_t q3_qnorm(q3_quat_t q);
+static inline q3_quat_t q3_qnorm(q3_quat_t q);
 
 //--------------------------------------------------------------------------------------------------
 // q3Transform
@@ -303,15 +304,15 @@ struct q3_transform_t {
 	q3_mat3_t rotation;
 };
 
-inline q3_vec3_t q3_tmulv3(q3_transform_t *tx, q3_vec3_t v);
-inline q3_vec3_t q3_tmul_scale_v3(q3_transform_t *tx, q3_vec3_t scale, q3_vec3_t v);
-inline q3_transform_t q3_tmul(q3_transform_t *t, q3_transform_t *u);
-inline q3_vec3_t q3_tmulv3_trans(q3_transform_t *tx, q3_vec3_t v);
-inline q3_vec3_t q3_m3mulv3_trans(q3_mat3_t *r, q3_vec3_t v);
-inline q3_mat3_t q3_m3mul_trans(q3_mat3_t *r, q3_mat3_t *q);
-inline q3_transform_t q3_tmul_trans(q3_transform_t *t, q3_transform_t *u);
-inline void q3_tidentity(q3_transform_t *tx);
-inline q3_transform_t q3_tinverse(q3_transform_t *tx);
+static inline q3_vec3_t q3_tmulv3(q3_transform_t *tx, q3_vec3_t v);
+static inline q3_vec3_t q3_tmul_scale_v3(q3_transform_t *tx, q3_vec3_t scale, q3_vec3_t v);
+static inline q3_transform_t q3_tmul(q3_transform_t *t, q3_transform_t *u);
+static inline q3_vec3_t q3_tmulv3_trans(q3_transform_t *tx, q3_vec3_t v);
+static inline q3_vec3_t q3_m3mulv3_trans(q3_mat3_t *r, q3_vec3_t v);
+static inline q3_mat3_t q3_m3mul_trans(q3_mat3_t *r, q3_mat3_t *q);
+static inline q3_transform_t q3_tmul_trans(q3_transform_t *t, q3_transform_t *u);
+static inline void q3_tidentity(q3_transform_t *tx);
+static inline q3_transform_t q3_tinverse(q3_transform_t *tx);
 
 //--------------------------------------------------------------------------------------------------
 // q3Mass_data
@@ -458,6 +459,9 @@ typedef enum {
 
 void q3_contact_constraint_solve_collision(q3_contact_constraint_t *self);
 
+static inline q3_r32 q3_mix_restitution(q3_box_t *a, q3_box_t *b);
+static inline q3_r32 q3_mix_friction(q3_box_t *a, q3_box_t *b);
+
 //--------------------------------------------------------------------------------------------------
 // q3Collide
 //--------------------------------------------------------------------------------------------------
@@ -465,9 +469,9 @@ void q3_contact_constraint_solve_collision(q3_contact_constraint_t *self);
 void q3_box_to_box(q3_manifold_t* m, q3_box_t* a, q3_box_t* b);
 
 typedef enum {
-	Q3_BODY_STATIC,
-	Q3_BODY_DYNAMIC,
-	Q3_BODY_KINEMATIC
+	Q3_STATIC_BODY,
+	Q3_DYNAMIC_BODY,
+	Q3_KINEMATIC_BODY
 } q3_body_type_e;
 
 struct q3_body_t {
@@ -540,15 +544,6 @@ void q3_body_render(q3_body_t *self, q3_render_t *render);
 // used as C++ code to re-create an initial scene setup.
 void q3_body_dump(q3_body_t *self, FILE *file, q3_i32 index);
 
-#if PRIVATE
-// private
-q3_body_t q3_body_init(q3_bodydef_t *def, q3_scene_t* scene);
-
-void q3_body_calculate_mass_data(q3_body_t *self);
-void q3_body_synchronize_proxies(q3_body_t *self);
-
-#endif
-
 //--------------------------------------------------------------------------------------------------
 // q3Body_def
 //--------------------------------------------------------------------------------------------------
@@ -592,12 +587,12 @@ struct q3_aabb_t {
 };
 
 // http://box2d.org/2014/02/computing-a-basis/
-inline void q3_compute_basis(q3_vec3_t a, q3_vec3_t *__restrict b, q3_vec3_t *__restrict c);
-inline bool q3_aabb_to_aabb(q3_aabb_t *a, q3_aabb_t *b);
-inline bool q3_aabb_contains(q3_aabb_t *self, q3_aabb_t *other);
-inline bool q3_aabb_contains_point(q3_aabb_t *self, q3_vec3_t point);
-inline q3_r32 q3_aabb_surface_area(q3_aabb_t *self);
-inline q3_aabb_t q3_aabb_combine(q3_aabb_t *a, q3_aabb_t *b);
+static inline void q3_compute_basis(q3_vec3_t a, q3_vec3_t *__restrict b, q3_vec3_t *__restrict c);
+static inline bool q3_aabb_to_aabb(q3_aabb_t *a, q3_aabb_t *b);
+static inline bool q3_aabb_contains(q3_aabb_t *self, q3_aabb_t *other);
+static inline bool q3_aabb_contains_point(q3_aabb_t *self, q3_vec3_t point);
+static inline q3_r32 q3_aabb_surface_area(q3_aabb_t *self);
+static inline q3_aabb_t q3_aabb_combine(q3_aabb_t *a, q3_aabb_t *b);
 
 //--------------------------------------------------------------------------------------------------
 // q3Half_space
@@ -614,9 +609,9 @@ q3_vec3_t q3_half_space_origin(q3_half_space_t *self);
 q3_r32       q3_half_space_distance(q3_half_space_t *self, q3_vec3_t p);
 q3_vec3_t q3_half_space_projected(q3_half_space_t *self, q3_vec3_t p);
 
-inline q3_half_space_t q3_tmulhs(q3_transform_t *tx, q3_half_space_t *p);
-inline q3_half_space_t q3_tmul_scale_hs(q3_transform_t *tx, q3_vec3_t scale, q3_half_space_t *p);
-inline q3_half_space_t q3_tmulhs_trans(q3_transform_t *tx, q3_half_space_t *p);
+static inline q3_half_space_t q3_tmulhs(q3_transform_t *tx, q3_half_space_t *p);
+static inline q3_half_space_t q3_tmul_scale_hs(q3_transform_t *tx, q3_vec3_t scale, q3_half_space_t *p);
+static inline q3_half_space_t q3_tmulhs_trans(q3_transform_t *tx, q3_half_space_t *p);
 
 //--------------------------------------------------------------------------------------------------
 // q3Raycast_data
@@ -629,11 +624,11 @@ struct q3_raycast_data_t {
 	q3_vec3_t normal;	// Surface normal at impact
 };
 
-inline void q3_raycast_data_set(q3_raycast_data_t *self, q3_vec3_t start_point, q3_vec3_t direction, q3_r32 end_point_time);
+static inline void q3_raycast_data_set(q3_raycast_data_t *self, q3_vec3_t start_point, q3_vec3_t direction, q3_r32 end_point_time);
 // Uses toi, start and dir to compute the point at toi. Should
 // only be called after a raycast has been conducted with a
 // return value of true.
-inline q3_vec3_t q3_raycast_data_get_impact_point(q3_raycast_data_t *self);
+static inline q3_vec3_t q3_raycast_data_get_impact_point(q3_raycast_data_t *self);
 
 //--------------------------------------------------------------------------------------------------
 // q3Dynamic_AABBTree
@@ -677,6 +672,11 @@ struct q3_dynamic_aabb_tree_t {
 	q3_i32 m_freelist;
 };
 
+typedef struct q3_query_i q3_query_i;
+struct q3_query_i {
+    bool (*tree_callback)(q3_query_i *self, q3_i32 id);
+};
+
 q3_dynamic_aabb_tree_t q3_dynamic_aabb_tree_init(void);
 void q3_dynamic_aabb_tree_destroy(q3_dynamic_aabb_tree_t *self);
 
@@ -687,15 +687,15 @@ bool       q3_dynamic_aabb_tree_update(q3_dynamic_aabb_tree_t *self, q3_i32 id, 
 void      *q3_dynamic_aabb_tree_get_user_data(q3_dynamic_aabb_tree_t *self, q3_i32 id);
 q3_aabb_t *q3_dynamic_aabb_tree_get_fat_aabb(q3_dynamic_aabb_tree_t *self, q3_i32 id);
 void       q3_dynamic_aabb_tree_render(q3_dynamic_aabb_tree_t *self, q3_render_t *render);
-void       q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, void *cb, q3_aabb_t *aabb);
-void       q3_dynamic_aabb_tree_query_raycast(q3_dynamic_aabb_tree_t *self, void *cb, q3_raycast_data_t *ray_cast);
+void       q3_dynamic_aabb_tree_query_aabb(q3_dynamic_aabb_tree_t *self, q3_query_i *cb, q3_aabb_t *aabb);
+void       q3_dynamic_aabb_tree_query_raycast(q3_dynamic_aabb_tree_t *self, q3_query_i *cb, q3_raycast_data_t *ray_cast);
 // for testing
 void       q3_dynamic_aabb_tree_validate(q3_dynamic_aabb_tree_t *self);
 
 
 // Insert nodes at a given index until m_capacity into the free list
-inline void q3_dynamic_aabb_tree_add_to_freelist(q3_dynamic_aabb_tree_t *self, q3_i32 index);
-inline void q3_dynamic_aabb_tree_deallocate_node(q3_dynamic_aabb_tree_t *self, q3_i32 index);
+static inline void q3_dynamic_aabb_tree_add_to_freelist(q3_dynamic_aabb_tree_t *self, q3_i32 index);
+static inline void q3_dynamic_aabb_tree_deallocate_node(q3_dynamic_aabb_tree_t *self, q3_i32 index);
 
 typedef struct q3_contact_manager_t q3_contact_manager_t;
 typedef struct q3_box_t q3_box_t;
@@ -708,6 +708,8 @@ struct q3_contact_pair_t {
 
 typedef struct q3_broad_phase_t q3_broad_phase_t;
 struct q3_broad_phase_t {
+    q3_query_i m_interface;
+
 	q3_contact_manager_t *m_manager;
 
 	q3_contact_pair_t* m_pair_buffer;
@@ -732,17 +734,14 @@ void q3_broad_phase_update_pairs(q3_broad_phase_t *self);
 void q3_broad_phase_update(q3_broad_phase_t *self, q3_i32 id, q3_aabb_t *aabb);
 bool q3_broad_phase_test_overlap(q3_broad_phase_t *self, q3_i32 a, q3_i32 b);
 
-#if PRIVATE
-void q3_broad_phase_buffer_move(q3_broad_phase_t *self, q3_i32 id);
-// TODO
-bool q3_broad_phase_tree_call_back(q3_broad_phase_t *self, q3_i32 index);
-#endif
+static inline bool q3_broad_phase_tree_call_back(q3_query_i *interface, q3_i32 index);
 
 //--------------------------------------------------------------------------------------------------
 // q3Contact_manager
 //--------------------------------------------------------------------------------------------------
+
 typedef struct q3_contact_constraint_t q3_contact_constraint_t;
-typedef struct q3_contact_listener_t q3_contact_listener_t;
+typedef struct q3_contact_listener_i q3_contact_listener_i;
 
 typedef struct q3_contact_manager_t q3_contact_manager_t;
 struct q3_contact_manager_t {
@@ -751,11 +750,10 @@ struct q3_contact_manager_t {
 	q3_stack_t* m_stack;
 	q3_paged_allocator_t m_allocator;
 	q3_broad_phase_t m_broadphase;
-	q3_contact_listener_t *m_contact_listener;
+	q3_contact_listener_i *m_contact_listener;
 };
 
-q3_contact_manager_t q3_contact_manager_init(q3_stack_t *stack);
-void q3_contact_manager_destroy(q3_contact_manager_t *self);
+void q3_contact_manager_init(q3_contact_manager_t *self, q3_stack_t *stack);
 
 // Add a new contact constraint for a pair of objects
 // unless the contact constraint already exists
@@ -771,7 +769,6 @@ void q3_contact_manager_remove_from_broadphase(q3_contact_manager_t *self, q3_bo
 // Remove contacts without broadphase overlap
 // Solves contact manifolds
 void q3_contact_manager_test_collisions(q3_contact_manager_t *self);
-void q3_contact_manager_solve_collision(void* param);
 void q3_contact_manager_render_contacts(q3_contact_manager_t *self, q3_render_t* debug_drawer);
 
 //--------------------------------------------------------------------------------------------------
@@ -865,16 +862,15 @@ void q3_island_initialize(q3_island_t *self);
 //--------------------------------------------------------------------------------------------------
 // q3Scene
 //--------------------------------------------------------------------------------------------------
-typedef struct q3_body_def_t q3_body_def_t;
 
 // This listener is used to gather information about two shapes colliding. This
 // can be used for game logic and sounds. Physics objects created in these
 // callbacks will not be reported until the following frame. These callbacks
 // can be called frequently, so make them efficient.
-typedef struct q3_contact_listener_t q3_contact_listener_t;
-struct q3_contact_listener_t {
-	void (*begin_contact)(q3_contact_constraint_t *contact);
-	void (*end_contact)(q3_contact_constraint_t *contact);
+typedef struct q3_contact_listener_i q3_contact_listener_i;
+struct q3_contact_listener_i {
+	void (*begin_contact)(q3_contact_listener_i *self, q3_contact_constraint_t *contact);
+	void (*end_contact)(q3_contact_listener_i *self, q3_contact_constraint_t *contact);
 };
 
 // This class represents general queries for points, AABBs and Raycasting.
@@ -882,9 +878,9 @@ struct q3_contact_listener_t {
 // value of Report_shape controls whether to continue or stop the query.
 // By returning only true, all shapes that fulfill the query will be re-
 // ported.
-typedef struct q3_query_callback_t q3_query_callback_t;
-struct q3_query_callback_t {
-	bool (*report_shape)(q3_box_t *box);
+typedef struct q3_query_callback_i q3_query_callback_i;
+struct q3_query_callback_i {
+	bool (*report_shape)(q3_query_callback_i *self, q3_box_t *box);
 };
 
 struct q3_scene_t {
@@ -913,14 +909,14 @@ struct q3_scene_desc_t {
     q3_i32 iterations; // default 20
 };
 
-q3_scene_t q3_scene_init(q3_scene_desc_t *desc);
+void q3_scene_init(q3_scene_t *self, q3_scene_desc_t *desc);
 void q3_scene_destroy(q3_scene_t *self);
 // Run the simulation forward in time by dt (fixed timestep). Variable
 // timestep is not supported.
 void q3_scene_step(q3_scene_t *self);
 // Construct a new rigid body. The Body_def can be reused at the user's
 // discretion, as no reference to the Body_def is kept.
-q3_body_t* q3_scene_create_body(q3_scene_t *self, q3_body_def_t *def);
+q3_body_t* q3_scene_create_body(q3_scene_t *self, q3_bodydef_t *def);
 // Frees a body, removes all shapes associated with the body and frees
 // all shapes and contacts associated and attached to this body.
 void q3_scene_remove_body(q3_scene_t *self, q3_body_t* body);
@@ -942,28 +938,25 @@ void q3_scene_set_enable_friction(q3_scene_t *self, bool enabled);
 // Render the scene with an interpolated time between the last frame and
 // the current simulation step.
 void q3_scene_render(q3_scene_t *self, q3_render_t* render);
-// Gets and sets the global gravity vector used during integration
-q3_vec3_t q3_scene_get_gravity(q3_scene_t *self);
-void q3_scene_set_gravity(q3_scene_t *self, q3_vec3_t gravity);
 // Removes all bodies from the scene.
 void q3_scene_shutdown(q3_scene_t *self);
-// Sets the listener to report collision start/end. Provides the user
+// Sets the listener to report cllision start/end. Provides the user
 // with a pointer to an q3Contact_constraint. The q3Contact_constraint
 // holds pointers to the two shapes involved in a collision, and the
 // two bodies connected to each shape. The q3Contact_listener will be
 // called very often, so it is recommended for the funciton to be very
 // efficient. Provide a NULL pointer to remove the previously set
 // listener.
-void q3_scene_set_contact_listener(q3_scene_t *self, q3_contact_listener_t* listener);
+void q3_scene_set_contact_listener(q3_scene_t *self, q3_contact_listener_i* listener);
 // Query the world to find any shapes that can potentially intersect
 // the provided AABB. This works by querying the broadphase with an
 // AAABB -- only *potential* intersections are reported. Perhaps the
 // user might use lm_distance as fine-grained collision detection.
-void q3_scene_query_aabb(q3_scene_t *self, q3_query_callback_t *cb, q3_aabb_t aabb);
+void q3_scene_query_aabb(q3_scene_t *self, q3_query_callback_i *cb, q3_aabb_t aabb);
 // Query the world to find any shapes intersecting a world space point.
-void q3_scene_query_point(q3_scene_t *self, q3_query_callback_t *cb, q3_vec3_t point);
+void q3_scene_query_point(q3_scene_t *self, q3_query_callback_i *cb, q3_vec3_t point);
 // Query the world to find any shapes intersecting a ray.
-void q3_scene_ray_cast(q3_scene_t *self, q3_query_callback_t *cb, q3_raycast_data_t *ray_cast);
+void q3_scene_ray_cast(q3_scene_t *self, q3_query_callback_i *cb, q3_raycast_data_t *ray_cast);
 // Dump all rigid bodies and shapes into a log file. The log can be
 // used as C++ code to re-create an initial scene setup. Contacts
 // are *not* logged, meaning any cached resolution solutions will
@@ -972,53 +965,53 @@ void q3_scene_ray_cast(q3_scene_t *self, q3_query_callback_t *cb, q3_raycast_dat
 // simulation.
 void q3_scene_dump(q3_scene_t *self, FILE* file);
 
-
 //--------------------------------------------------------------------------------------------------
 // q3Render
 //--------------------------------------------------------------------------------------------------
 typedef struct q3_render_t q3_render_t;
 struct q3_render_t {
-	void (*set_pen_color)(q3_f32 r, q3_f32 g, q3_f32 b, q3_f32 a);
-	void (*set_pen_position)(q3_f32 x, q3_f32 y, q3_f32 z);
-	void (*set_scale)(q3_f32 sx, q3_f32 sy, q3_f32 sz);
+	void (*set_pen_color)(q3_render_t *self, q3_f32 r, q3_f32 g, q3_f32 b, q3_f32 a);
+	void (*set_pen_position)(q3_render_t *self, q3_f32 x, q3_f32 y, q3_f32 z);
+	void (*set_scale)(q3_render_t *self, q3_f32 sx, q3_f32 sy, q3_f32 sz);
 	// Render a line from pen position to this point.
 	// Sets the pen position to the new point.
-	void (*line)(q3_f32 x, q3_f32 y, q3_f32 z);
-	void (*set_tri_normal)(q3_f32 x, q3_f32 y, q3_f32 z);
+	void (*line)(q3_render_t *self, q3_f32 x, q3_f32 y, q3_f32 z);
+	void (*set_tri_normal)(q3_render_t *self, q3_f32 x, q3_f32 y, q3_f32 z);
 	// Render a triangle with the normal set by Set_tri_normal.
 	void (*triangle)(
+        q3_render_t *self, 
 		q3_f32 x1, q3_f32 y1, q3_f32 z1,
 		q3_f32 x2, q3_f32 y2, q3_f32 z2,
 		q3_f32 x3, q3_f32 y3, q3_f32 z3
 		);
 	// Draw a point with the scale from Set_scale
-	void (*point)();
+	void (*point)(q3_render_t *self);
 };
 
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-// Inline implementations 
+// static inline implementations 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 
-inline void q3_swap(q3_r32 *a, q3_r32 *b) {
+static inline void q3_swap(q3_r32 *a, q3_r32 *b) {
     q3_r32 t = *a;
     *a = *b;
     *b = t;
 }
 
-inline void q3_uswap(q3_u8 *a, q3_u8 *b) {
+static inline void q3_uswap(q3_u8 *a, q3_u8 *b) {
     q3_u8 t = *a;
     *a = *b;
     *b = t;
 }
 
-inline q3_r32 q3_invert(q3_r32 a) {
-    return a != 0.f ? 1.f / 1 : 0.f;
+static inline q3_r32 q3_invert(q3_r32 a) {
+    return a != 0.f ? 1.f / a : 0.f;
 }
 
-inline q3_r32 q3_sign(q3_r32 a) {
+static inline q3_r32 q3_sign(q3_r32 a) {
     if (a >= 0.f) {
         return 1.f;
     }
@@ -1027,49 +1020,49 @@ inline q3_r32 q3_sign(q3_r32 a) {
     }
 }
 
-inline q3_r32 q3_abs(q3_r32 a) {
+static inline q3_r32 q3_abs(q3_r32 a) {
     if (a < 0.f) {
         return -a;
     }
     return a;
 }
 
-inline q3_r32 q3_imin(q3_i32 a, q3_i32 b) {
+static inline q3_i32 q3_imin(q3_i32 a, q3_i32 b) {
     if (a < b) {
         return a;
     }
     return b;
 }
 
-inline q3_r32 q3_rmin(q3_r32 a, q3_r32 b) {
+static inline q3_r32 q3_rmin(q3_r32 a, q3_r32 b) {
     if (a < b) {
         return a;
     }
     return b;
 }
 
-inline q3_r32 q3_imax(q3_i32 a, q3_i32 b) {
+static inline q3_i32 q3_imax(q3_i32 a, q3_i32 b) {
     if (a > b) {
         return a;
     }
     return b;
 }
 
-inline q3_r32 q3_rmax(q3_r32 a, q3_r32 b) {
+static inline q3_r32 q3_rmax(q3_r32 a, q3_r32 b) {
     if (a > b) {
         return a;
     }
     return b;
 }
 
-inline q3_r32 q3_umax(q3_u8 a, q3_u8 b) {
+static inline q3_u8 q3_umax(q3_u8 a, q3_u8 b) {
     if (a > b) {
         return a;
     }
     return b;
 }
 
-inline q3_r32 q3_clamp01(q3_r32 val) {
+static inline q3_r32 q3_clamp01(q3_r32 val) {
     if (val >= 1.f) {
         return 1.f;
     }
@@ -1079,7 +1072,7 @@ inline q3_r32 q3_clamp01(q3_r32 val) {
     return val;
 }
 
-inline q3_r32 q3_clamp(q3_r32 min, q3_r32 max, q3_r32 a) {
+static inline q3_r32 q3_clamp(q3_r32 min, q3_r32 max, q3_r32 a) {
     if (a >= max) {
         return max;
     }
@@ -1089,26 +1082,26 @@ inline q3_r32 q3_clamp(q3_r32 min, q3_r32 max, q3_r32 a) {
     return a;
 }
 
-inline q3_r32 q3_lerp(q3_r32 a, q3_r32 b, q3_r32 t) {
+static inline q3_r32 q3_lerp(q3_r32 a, q3_r32 b, q3_r32 t) {
     return a * (1.f - t) + b * t;
 }
 
-inline q3_r32 q3_random_float(q3_r32 l, q3_r32 h) {
+static inline q3_r32 q3_random_float(q3_r32 l, q3_r32 h) {
     q3_r32 a = (q3_r32)rand();
     a /= (q3_r32)RAND_MAX;
     a = (h - l) * a + l;
     return a;
 }
 
-inline q3_r32 q3_random_int(q3_i32 low, q3_i32 high) {
+static inline q3_i32 q3_random_int(q3_i32 low, q3_i32 high) {
     return rand() % (high - low + 1) + low;
 }
 
-inline q3_vec3_t q3_v3identity(void) {
+static inline q3_vec3_t q3_v3identity(void) {
     return (q3_vec3_t){ 0, 0, 0 };
 }
 
-inline q3_vec3_t q3_v3mul(q3_vec3_t left, q3_vec3_t right) {
+static inline q3_vec3_t q3_v3mul(q3_vec3_t left, q3_vec3_t right) {
     return (q3_vec3_t){
         .x = left.x * right.x,
         .y = left.y * right.y,
@@ -1117,7 +1110,7 @@ inline q3_vec3_t q3_v3mul(q3_vec3_t left, q3_vec3_t right) {
 }
 
 
-inline q3_vec3_t q3_v3div(q3_vec3_t left, q3_vec3_t right) {
+static inline q3_vec3_t q3_v3div(q3_vec3_t left, q3_vec3_t right) {
     return (q3_vec3_t){
         .x = left.x / right.x,
         .y = left.y / right.y,
@@ -1125,11 +1118,11 @@ inline q3_vec3_t q3_v3div(q3_vec3_t left, q3_vec3_t right) {
     };
 }
 
-inline q3_r32 q3_dot(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_r32 q3_dot(q3_vec3_t a, q3_vec3_t b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-inline q3_vec3_t q3_cross(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_vec3_t q3_cross(q3_vec3_t a, q3_vec3_t b) {
     return (q3_vec3_t){
 		.x = (a.y * b.z) - (b.y * a.z),
 		.y = (b.x * a.z) - (a.x * b.z),
@@ -1137,15 +1130,15 @@ inline q3_vec3_t q3_cross(q3_vec3_t a, q3_vec3_t b) {
     };
 }
 
-inline q3_r32 q3_length(q3_vec3_t v) {
+static inline q3_r32 q3_length(q3_vec3_t v) {
     return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
-inline q3_r32 q3_lengthsq(q3_vec3_t v) {
+static inline q3_r32 q3_lengthsq(q3_vec3_t v) {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
-inline q3_vec3_t q3_norm(q3_vec3_t v) {
+static inline q3_vec3_t q3_norm(q3_vec3_t v) {
     q3_r32 l = q3_length(v);
     if (l != 0) {
         q3_r32 inv = 1.f / l;
@@ -1155,7 +1148,7 @@ inline q3_vec3_t q3_norm(q3_vec3_t v) {
     return v;
 }
 
-inline q3_r32 q3_distance(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_r32 q3_distance(q3_vec3_t a, q3_vec3_t b) {
 	q3_r32 xp = a.x - b.x;
 	q3_r32 yp = a.y - b.y;
 	q3_r32 zp = a.z - b.z;
@@ -1163,7 +1156,7 @@ inline q3_r32 q3_distance(q3_vec3_t a, q3_vec3_t b) {
 	return sqrtf(xp * xp + yp * yp + zp * zp);
 }
 
-inline q3_r32 q3_distancesq(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_r32 q3_distancesq(q3_vec3_t a, q3_vec3_t b) {
 	q3_r32 xp = a.x - b.x;
 	q3_r32 yp = a.y - b.y;
 	q3_r32 zp = a.z - b.z;
@@ -1171,32 +1164,32 @@ inline q3_r32 q3_distancesq(q3_vec3_t a, q3_vec3_t b) {
 	return xp * xp + yp * yp + zp * zp;
 }
 
-inline q3_vec3_t q3_v3abs(q3_vec3_t v) {
+static inline q3_vec3_t q3_v3abs(q3_vec3_t v) {
 	return (q3_vec3_t){ q3_abs(v.x), q3_abs(v.y), q3_abs(v.z) };
 }
 
-inline q3_vec3_t q3_v3min(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_vec3_t q3_v3min(q3_vec3_t a, q3_vec3_t b) {
 	return (q3_vec3_t){ q3_rmin(a.x, b.x), q3_rmin(a.y, b.y), q3_rmin(a.z, b.z) };
 }
 
-inline q3_vec3_t q3_v3max(q3_vec3_t a, q3_vec3_t b) {
+static inline q3_vec3_t q3_v3max(q3_vec3_t a, q3_vec3_t b) {
 	return (q3_vec3_t){ q3_rmax(a.x, b.x), q3_rmax(a.y, b.y), q3_rmax(a.z, b.z) };
 }
 
-inline q3_r32 q3_min_per_elem(q3_vec3_t a) {
+static inline q3_r32 q3_min_per_elem(q3_vec3_t a) {
 	return q3_rmin(a.x, q3_rmin(a.y, a.z));
 }
 
-inline q3_r32 q3_max_per_elem(q3_vec3_t a) {
+static inline q3_r32 q3_max_per_elem(q3_vec3_t a) {
 	return q3_rmax(a.x, q3_rmax(a.y, a.z));
 }
 
-inline q3_vec3_t q3_v3lerp(q3_vec3_t a, q3_vec3_t b, q3_r32 t) {
+static inline q3_vec3_t q3_v3lerp(q3_vec3_t a, q3_vec3_t b, q3_r32 t) {
     // (a * (1.f - t)) + (b * t)
     return q3_v3add(q3_v3mulf(a, 1.f - 5), q3_v3mulf(b, t));
 }
 
-inline q3_mat3_t q3_m3identity(void) {
+static inline q3_mat3_t q3_m3identity(void) {
     return (q3_mat3_t){
         .ex = { 1, 0, 0 },
         .ey = { 0, 1, 0 },
@@ -1204,11 +1197,11 @@ inline q3_mat3_t q3_m3identity(void) {
     };
 }
 
-inline q3_mat3_t q3_rotate(q3_vec3_t x, q3_vec3_t y, q3_vec3_t z) {
+static inline q3_mat3_t q3_rotate(q3_vec3_t x, q3_vec3_t y, q3_vec3_t z) {
 	return (q3_mat3_t){ x, y, z };
 }
 
-inline q3_mat3_t q3_transpose(q3_mat3_t *m) {
+static inline q3_mat3_t q3_transpose(q3_mat3_t *m) {
 	return (q3_mat3_t) {
         .ex = { m->ex.x, m->ey.x, m->ez.x },
         .ey = { m->ex.y, m->ey.y, m->ez.y },
@@ -1216,11 +1209,11 @@ inline q3_mat3_t q3_transpose(q3_mat3_t *m) {
     };
 }
 
-inline void q3_mat3_zero(q3_mat3_t *m) {
+static inline void q3_mat3_zero(q3_mat3_t *m) {
 	memset(m, 0, sizeof(q3_r32) * 9);
 }
 
-inline q3_mat3_t q3_diagonalf(q3_r32 a) {
+static inline q3_mat3_t q3_diagonalf(q3_r32 a) {
 	return (q3_mat3_t) {
         .ex = { a  , 0.f, 0.f },
         .ey = { 0.f, a  , 0.f },
@@ -1228,7 +1221,7 @@ inline q3_mat3_t q3_diagonalf(q3_r32 a) {
     };
 }
 
-inline q3_mat3_t q3_diagonal(q3_r32 a, q3_r32 b, q3_r32 c) {
+static inline q3_mat3_t q3_diagonal(q3_r32 a, q3_r32 b, q3_r32 c) {
 	return (q3_mat3_t) {
         .ex = { a  , 0.f, 0.f },
         .ey = { 0.f, b  , 0.f },
@@ -1236,7 +1229,7 @@ inline q3_mat3_t q3_diagonal(q3_r32 a, q3_r32 b, q3_r32 c) {
     };
 }
 
-inline q3_mat3_t q3_outer_product(q3_vec3_t u, q3_vec3_t v) {
+static inline q3_mat3_t q3_outer_product(q3_vec3_t u, q3_vec3_t v) {
 	q3_vec3_t a = q3_v3mulf(v, u.x);
 	q3_vec3_t b = q3_v3mulf(v, u.y);
 	q3_vec3_t c = q3_v3mulf(v, u.z);
@@ -1248,7 +1241,7 @@ inline q3_mat3_t q3_outer_product(q3_vec3_t u, q3_vec3_t v) {
     };
 }
 
-inline q3_mat3_t q3_covariance(q3_vec3_t *points, q3_u32 num_points) {
+static inline q3_mat3_t q3_covariance(q3_vec3_t *points, q3_u32 num_points) {
 	q3_r32 inv_num_points = 1.f / (q3_r32)num_points;
 	q3_vec3_t c = {0};
 
@@ -1283,7 +1276,7 @@ inline q3_mat3_t q3_covariance(q3_vec3_t *points, q3_u32 num_points) {
     };
 };
 
-inline q3_mat3_t q3_inverse(q3_mat3_t *m) {
+static inline q3_mat3_t q3_inverse(q3_mat3_t *m) {
 	q3_vec3_t tmp0, tmp1, tmp2;
 
 	tmp0 = q3_cross(m->ey, m->ez);
@@ -1299,7 +1292,7 @@ inline q3_mat3_t q3_inverse(q3_mat3_t *m) {
     };
 }
 
-inline q3_quat_t q3_qnorm(q3_quat_t q) {
+static inline q3_quat_t q3_qnorm(q3_quat_t q) {
 	q3_r32 d = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
 
 	if(d == 0) {
@@ -1318,22 +1311,22 @@ inline q3_quat_t q3_qnorm(q3_quat_t q) {
     return q;
 }
 
-inline q3_vec3_t q3_tmulv3(q3_transform_t *tx, q3_vec3_t v) {
-    return q3_m3mulv3(&tx->rotation, q3_v3add(v, tx->position));
+static inline q3_vec3_t q3_tmulv3(q3_transform_t *tx, q3_vec3_t v) {
+	return q3_v3add(q3_m3mulv3(&tx->rotation, v), tx->position);
 }
 
-inline q3_vec3_t q3_tmul_scale_v3(q3_transform_t *tx, q3_vec3_t scale, q3_vec3_t v) {
+static inline q3_vec3_t q3_tmul_scale_v3(q3_transform_t *tx, q3_vec3_t scale, q3_vec3_t v) {
     return q3_v3add(q3_m3mulv3(&tx->rotation, q3_v3mul(scale, v)), tx->position);
 }
 
-inline q3_transform_t q3_tmul(q3_transform_t *t, q3_transform_t *u) {
+static inline q3_transform_t q3_tmul(q3_transform_t *t, q3_transform_t *u) {
 	return (q3_transform_t) {
         .rotation = q3_m3mul(&t->rotation, &u->rotation),
         .position = q3_v3add(q3_m3mulv3(&t->rotation, u->position), t->position),
     };
 }
 
-inline q3_half_space_t q3_tmulhs(q3_transform_t *tx, q3_half_space_t *p) {
+static inline q3_half_space_t q3_tmulhs(q3_transform_t *tx, q3_half_space_t *p) {
 	q3_vec3_t origin = q3_half_space_origin(p);
 	origin = q3_tmulv3(tx, origin);
 	q3_vec3_t normal = q3_m3mulv3(&tx->rotation, p->normal);
@@ -1344,7 +1337,7 @@ inline q3_half_space_t q3_tmulhs(q3_transform_t *tx, q3_half_space_t *p) {
     };
 }
 
-inline q3_half_space_t q3_tmul_scale_hs(q3_transform_t *tx, q3_vec3_t scale, q3_half_space_t *p) {
+static inline q3_half_space_t q3_tmul_scale_hs(q3_transform_t *tx, q3_vec3_t scale, q3_half_space_t *p) {
 	q3_vec3_t origin = q3_half_space_origin(p);
 	origin = q3_tmul_scale_v3(tx, scale, origin);
 	q3_vec3_t normal = q3_m3mulv3(&tx->rotation, p->normal);
@@ -1355,41 +1348,41 @@ inline q3_half_space_t q3_tmul_scale_hs(q3_transform_t *tx, q3_vec3_t scale, q3_
     };
 }
 
-inline q3_vec3_t q3_tmulv3_trans(q3_transform_t *tx, q3_vec3_t v) {
+static inline q3_vec3_t q3_tmulv3_trans(q3_transform_t *tx, q3_vec3_t v) {
     q3_mat3_t t = q3_transpose(&tx->rotation);
     return q3_m3mulv3(&t, q3_v3sub(v, tx->position));
 }
 
-inline q3_vec3_t q3_m3mulv3_trans(q3_mat3_t *r, q3_vec3_t v) {
+static inline q3_vec3_t q3_m3mulv3_trans(q3_mat3_t *r, q3_vec3_t v) {
     q3_mat3_t t = q3_transpose(r);
     return q3_m3mulv3(&t, v);
 }
 
-inline q3_mat3_t q3_m3mul_trans(q3_mat3_t *r, q3_mat3_t *q) {
+static inline q3_mat3_t q3_m3mul_trans(q3_mat3_t *r, q3_mat3_t *q) {
     q3_mat3_t t = q3_transpose(r);
     return q3_m3mul(&t, q);
 }
 
-inline q3_transform_t q3_tmul_trans(q3_transform_t *t, q3_transform_t *u) {
+static inline q3_transform_t q3_tmul_trans(q3_transform_t *t, q3_transform_t *u) {
 	return (q3_transform_t) {
         .rotation = q3_m3mul_trans(&t->rotation, &u->rotation),
         .position = q3_m3mulv3_trans(&t->rotation, q3_v3sub(u->position, t->position)),
     };
 }
 
-inline q3_half_space_t q3_tmulhs_trans(q3_transform_t *tx, q3_half_space_t *p) {
+static inline q3_half_space_t q3_tmulhs_trans(q3_transform_t *tx, q3_half_space_t *p) {
 	q3_vec3_t origin = q3_v3mulf(p->normal, p->distance);
 	origin = q3_tmulv3_trans(tx, origin);
 	q3_vec3_t n = q3_m3mulv3_trans(&tx->rotation, p->normal);
     return (q3_half_space_t){ n, q3_dot(origin, n) };
 }
 
-inline void q3_tidentity(q3_transform_t *tx) {
+static inline void q3_tidentity(q3_transform_t *tx) {
     tx->position = q3_v3identity();
     tx->rotation = q3_m3identity();
 }
 
-inline q3_transform_t q3_tinverse(q3_transform_t *tx) {
+static inline q3_transform_t q3_tinverse(q3_transform_t *tx) {
     q3_mat3_t r = q3_transpose(&tx->rotation);
 	return (q3_transform_t) {
         .rotation = r,
@@ -1398,7 +1391,7 @@ inline q3_transform_t q3_tinverse(q3_transform_t *tx) {
 }
 
 // http://box2d.org/2014/02/computing-a-basis/
-inline void q3_compute_basis(q3_vec3_t a, q3_vec3_t *__restrict b, q3_vec3_t *__restrict c) {
+static inline void q3_compute_basis(q3_vec3_t a, q3_vec3_t *__restrict b, q3_vec3_t *__restrict c) {
 	// Suppose vector a has all equal components and is a unit vector: a = (s, s, s)
 	// Then 3*s*s = 1, s = sqrt(1/3) = 0.57735027. This means that at least one component of a
 	// unit vector must be greater or equal to 0.57735027. Can use SIMD select operation.
@@ -1414,7 +1407,7 @@ inline void q3_compute_basis(q3_vec3_t a, q3_vec3_t *__restrict b, q3_vec3_t *__
 	*c = q3_cross(a, *b);
 }
 
-inline bool q3_aabb_to_aabb(q3_aabb_t *a, q3_aabb_t *b) {
+static inline bool q3_aabb_to_aabb(q3_aabb_t *a, q3_aabb_t *b) {
 	if (a->max.x < b->min.x || a->min.x > b->max.x) {
 		return false;
     }
@@ -1430,7 +1423,7 @@ inline bool q3_aabb_to_aabb(q3_aabb_t *a, q3_aabb_t *b) {
 	return true;
 }
 
-inline bool q3_aabb_contains(q3_aabb_t *self, q3_aabb_t *other) {
+static inline bool q3_aabb_contains(q3_aabb_t *self, q3_aabb_t *other) {
 	return
 		self->min.x <= other->min.x &&
 		self->min.y <= other->min.y &&
@@ -1440,7 +1433,7 @@ inline bool q3_aabb_contains(q3_aabb_t *self, q3_aabb_t *other) {
 		self->max.z >= other->max.z;
 }
 
-inline bool q3_aabb_contains_point(q3_aabb_t *self, q3_vec3_t point) {
+static inline bool q3_aabb_contains_point(q3_aabb_t *self, q3_vec3_t point) {
 	return
 		self->min.x <= point.x &&
 		self->min.y <= point.y &&
@@ -1450,7 +1443,7 @@ inline bool q3_aabb_contains_point(q3_aabb_t *self, q3_vec3_t point) {
 		self->max.z >= point.z;
 }
 
-inline q3_r32 q3_aabb_surface_area(q3_aabb_t *self) {
+static inline q3_r32 q3_aabb_surface_area(q3_aabb_t *self) {
 	q3_r32 x = self->max.x - self->min.x;
 	q3_r32 y = self->max.y - self->min.y;
 	q3_r32 z = self->max.z - self->min.z;
@@ -1458,14 +1451,14 @@ inline q3_r32 q3_aabb_surface_area(q3_aabb_t *self) {
 	return 2.f * (x * y + x * z + y * z);
 }
 
-inline q3_aabb_t q3_aabb_combine(q3_aabb_t *a, q3_aabb_t *b) {
+static inline q3_aabb_t q3_aabb_combine(q3_aabb_t *a, q3_aabb_t *b) {
 	return (q3_aabb_t){
         .min = q3_v3min(a->min, b->min),
         .max = q3_v3max(a->max, b->max),
     };
 }
 
-inline void q3_raycast_data_set(q3_raycast_data_t *self, q3_vec3_t start_point, q3_vec3_t direction, q3_r32 end_point_time) {
+static inline void q3_raycast_data_set(q3_raycast_data_t *self, q3_vec3_t start_point, q3_vec3_t direction, q3_r32 end_point_time) {
     self->start = start_point;
     self->dir = direction;
     self->t = end_point_time;
@@ -1474,12 +1467,12 @@ inline void q3_raycast_data_set(q3_raycast_data_t *self, q3_vec3_t start_point, 
 // Uses toi, start and dir to compute the point at toi. Should
 // only be called after a raycast has been conducted with a
 // return value of true.
-inline q3_vec3_t q3_raycast_data_get_impact_point(q3_raycast_data_t *self) {
+static inline q3_vec3_t q3_raycast_data_get_impact_point(q3_raycast_data_t *self) {
     return q3_v3add(self->start, q3_v3mulf(self->dir, self->toi));
 }
 
 // Insert nodes at a given index until m_capacity into the free list
-inline void q3_dynamic_aabb_tree_add_to_freelist(q3_dynamic_aabb_tree_t *self, q3_i32 index) {
+static inline void q3_dynamic_aabb_tree_add_to_freelist(q3_dynamic_aabb_tree_t *self, q3_i32 index) {
 	for (q3_i32 i = index; i < self->m_capacity - 1; ++i) {
 		self->m_nodes[i].next = i + 1;
 		self->m_nodes[i].height = Q3_AABB_NULL_NODE;
@@ -1490,7 +1483,7 @@ inline void q3_dynamic_aabb_tree_add_to_freelist(q3_dynamic_aabb_tree_t *self, q
 	self->m_freelist = index;
 }
 
-inline void q3_dynamic_aabb_tree_deallocate_node(q3_dynamic_aabb_tree_t *self, q3_i32 index) {
+static inline void q3_dynamic_aabb_tree_deallocate_node(q3_dynamic_aabb_tree_t *self, q3_i32 index) {
 	assert(index >= 0 && index < self->m_capacity);
 
 	self->m_nodes[index].next = self->m_freelist;
@@ -1499,3 +1492,37 @@ inline void q3_dynamic_aabb_tree_deallocate_node(q3_dynamic_aabb_tree_t *self, q
 
 	--self->m_count;
 }
+
+static inline bool q3_broad_phase_tree_call_back(q3_query_i *interface, q3_i32 index) {
+    q3_broad_phase_t *self = (q3_broad_phase_t *)interface;
+	// Cannot collide with self
+	if (index == self->m_current_index) {
+		return true;
+    }
+
+	if (self->m_pair_count == self->m_pair_capacity) {
+		q3_contact_pair_t* old_buffer = self->m_pair_buffer;
+		self->m_pair_capacity *= 2;
+		self->m_pair_buffer = q3_alloc(self->m_pair_capacity * sizeof(q3_contact_pair_t));
+		memcpy(self->m_pair_buffer, old_buffer, self->m_pair_count * sizeof(q3_contact_pair_t));
+		q3_free(old_buffer);
+	}
+
+	q3_i32 iA = q3_imin(index, self->m_current_index);
+	q3_i32 iB = q3_imax(index, self->m_current_index);
+
+	self->m_pair_buffer[self->m_pair_count].A = iA;
+	self->m_pair_buffer[self->m_pair_count].B = iB;
+	++self->m_pair_count;
+
+	return true;
+}
+
+static inline q3_r32 q3_mix_restitution(q3_box_t *a, q3_box_t *b) {
+    return q3_rmax(a->restitution, b->restitution);
+}
+
+static inline q3_r32 q3_mix_friction(q3_box_t *a, q3_box_t *b) {
+    return sqrtf(a->friction * b->friction);
+}
+
