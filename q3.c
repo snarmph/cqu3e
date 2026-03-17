@@ -3525,6 +3525,7 @@ void q3_scene_step(q3_scene_t *self) {
 
 q3_body_t* q3_scene_create_body(q3_scene_t *self, q3_bodydef_t *def) {
     q3_body_t* body = q3_heap_allocate(&self->m_heap, sizeof(q3_body_t));
+    memset(body, 0, sizeof(q3_body_t));
     q3__body_init(body, def, self);
 
 	// Add body to scene body_list
